@@ -86,36 +86,30 @@ public class VlFunction
             case OpType.Load32:
                 MultitypeOp(_sm.LoadI32,
                     () => Thrower.Throw(
-                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                        new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
                 break;
             case OpType.Load16:
                 MultitypeOp(_sm.LoadI16,
                     () => Thrower.Throw(
-                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                        new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
                 break;
             case OpType.Load8:
                 MultitypeOp(_sm.LoadI8,
                     () => Thrower.Throw(
-                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                        new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
                 break;
             case OpType.I8ToI64:
-                break;
             case OpType.I16ToI64:
-                break;
             case OpType.I32ToI64:
-                break;
             case OpType.I64ToI8:
-                break;
             case OpType.I64ToI16:
-                break;
             case OpType.I64ToI32:
-                break;
             case OpType.I64ToF64:
-                break;
             case OpType.F64ToI64:
+                _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), op.OpType.ToString()));
                 break;
             case OpType.Eq:
                 if (_sm.GetTypeInTop() == AsmType.I64)
@@ -211,6 +205,22 @@ public class VlFunction
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());
                 break;
         }
+    }
+
+    private static Type[] GetGenerics(OpType t)
+    {
+        return t switch
+        {
+            OpType.I8ToI64 => [typeof(sbyte), typeof(long)],
+            OpType.I16ToI64 => [typeof(short), typeof(long)],
+            OpType.I32ToI64 => [typeof(int), typeof(long)],
+            OpType.I64ToI8 => [typeof(long), typeof(sbyte)],
+            OpType.I64ToI16 => [typeof(long), typeof(short)],
+            OpType.I64ToI32 => [typeof(long), typeof(int)],
+            OpType.I64ToF64 => [typeof(long), typeof(double)],
+            OpType.F64ToI64 => [typeof(double), typeof(long)],
+            _ => Thrower.Throw<Type[]>(new ArgumentOutOfRangeException(nameof(t), t, null))
+        };
     }
 
     private void PushConst<T>(T value) where T : struct =>
