@@ -5,6 +5,7 @@ public static class OpTypeExtensions
     public static int StackOutput(this OpType value)
     {
         if (value.IsPush()) return 1;
+        if (value.IsDup()) return 1;
         if (value.IsDrop()) return -1;
         if (value.IsStore()) return -1;
         if (value.IsLoad()) return 1;
@@ -20,6 +21,7 @@ public static class OpTypeExtensions
 
     public static bool IsPush(this OpType v) => v is OpType.PushF64 or OpType.PushI64;
     public static bool IsDrop(this OpType v) => v is OpType.Drop;
+    public static bool IsDup(this OpType v) => v is OpType.Dup;
 
     public static bool IsStore(this OpType v) =>
         v is OpType.StoreI8 or OpType.StoreI16 or OpType.StoreI32 or OpType.StoreI64 or OpType.StoreF64;

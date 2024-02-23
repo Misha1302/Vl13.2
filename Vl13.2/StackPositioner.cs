@@ -7,7 +7,7 @@ public class StackPositioner(int offset)
     private int _curStackPos = offset + 8;
 
     private AssemblerMemoryOperand StackPos =>
-        AssemblerRegisters.__[AssemblerRegisters.rbp - _curStackPos];
+        __[rbp - _curStackPos];
 
     public AssemblerMemoryOperand Next()
     {

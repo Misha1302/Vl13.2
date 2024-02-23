@@ -49,4 +49,6 @@ public class StackManager(Assembler asm, StackPositioner sp)
         asm.and(rax, byte.MaxValue); // zero extra bits
         asm.mov(sp.Next(), al);
     }
+
+    public void Dup() => Push(sp.Peek() + 8);
 }

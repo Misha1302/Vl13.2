@@ -85,4 +85,6 @@ public partial class VlImageInfo
     public void Ret() => Image.Emit(new Op(OpType.Ret, null));
 
     public void LocAddress(string locName) => Image.Emit(new Op(OpType.LocAddress, locName));
+
+    public void Dup() => Image.Emit(new Op(OpType.Dup, null));
 }

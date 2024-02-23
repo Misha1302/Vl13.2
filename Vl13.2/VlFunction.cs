@@ -193,6 +193,9 @@ public class VlFunction
                 _asm.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
                 _sm.Push(rax);
                 break;
+            case OpType.Dup:
+                _sm.Dup();
+                break;
             default:
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());
                 break;

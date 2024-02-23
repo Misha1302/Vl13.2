@@ -18,48 +18,73 @@ The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered non
 unsafe
 {
     var vlModule = new VlModule();
-    var vlFunction = new VlImageInfo();
+    var main = new VlImageInfo();
+
+    main.LocAddress("strPtr"); // strPtr = alloc((100 - 35 + 1) * sizeof(char))
+    main.PushI64((100 - 35) * sizeof(char));
+    main.CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc), [typeof(int)]);
+    main.StoreI64();
+
+    main.LocAddress("i"); // i = 0
+    main.PushI64(35);
+    main.StoreI64();
 
 
-    vlFunction.LocAddress("i"); // i = 0
-    vlFunction.PushI64(35);
-    vlFunction.StoreI64();
+    main.SetLabel("label_start"); // while
 
+    // i != ...
+    main.LocAddress("i");
+    main.LoadI64();
+    main.PushI64(100);
+    main.Neq();
+    main.BrZero("label_end"); // if false
 
-    vlFunction.SetLabel("label_start"); // while
+    // body
+    main.LocAddress("strPtr"); // strPtr + ((i - 35) * sizeof(char))
+    main.LoadI64();
 
-    // i != 100_000
-    vlFunction.LocAddress("i");
-    vlFunction.LoadI64();
-    vlFunction.PushI64(100);
-    vlFunction.Neq();
-    vlFunction.BrZero("label_end"); // if false
+    main.LocAddress("i");
+    main.LoadI64();
+    main.PushI64(35);
+    main.SubI64();
 
-    vlFunction.LocAddress("i");
-    vlFunction.LoadI64();
-    vlFunction.CallSharp(typeof(Console), nameof(Console.Write), [typeof(char)]);
-    vlFunction.Drop();
+    main.PushI64(sizeof(char));
+    main.MulI64();
+
+    main.AddI64();
+
+    // *(address) = value
+    main.LocAddress("i");
+    main.LoadI16();
+    main.StoreI16();
+
 
     // i = i + 1
-    vlFunction.LocAddress("i"); // first arg for store
-    vlFunction.LocAddress("i"); // arg for load
-    vlFunction.LoadI64(); // first arg for add
-    vlFunction.PushI64(1); // second arg for add
-    vlFunction.AddI64(); // add
-    vlFunction.StoreI64(); // store
+    main.LocAddress("i"); // first arg for store
+    main.LocAddress("i"); // arg for load
+    main.LoadI64(); // first arg for add
+    main.PushI64(1); // second arg for add
+    main.AddI64(); // add
+    main.StoreI16(); // store
 
-    vlFunction.Br("label_start"); // continue
+    main.Br("label_start"); // continue
 
-    vlFunction.SetLabel("label_end"); // end
-    
-    
-    vlFunction.CallSharp(typeof(Console), nameof(Console.WriteLine), []);
-    vlFunction.Drop();
-    
-    vlFunction.Ret(); // return
+    main.SetLabel("label_end"); // end
+
+    main.LocAddress("strPtr"); // strPtr = alloc((100 - 35 + 1) * sizeof(char))
+    main.LoadI64();
+    main.PushI64((100 - 35) * sizeof(char));
+    main.AddI64();
+    main.PushI64('\0');
+    main.StoreI16();
 
 
-    vlModule.ImageFactories.Add(vlFunction);
+    main.LocAddress("strPtr");
+    main.LoadI64();
+    main.Ret(); // return
+
+
+    vlModule.ImageFactories.Add(main);
     var translator = new VlTranslator(vlModule);
     var asm = translator.Translate();
 

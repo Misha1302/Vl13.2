@@ -7,6 +7,7 @@ public enum OpType
     PushF64,
 
     Drop,
+    Dup,
 
     // ------- memory
     StoreI64,

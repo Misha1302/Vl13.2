@@ -50,11 +50,13 @@ public class CallManager(Assembler asm, StackManager sm)
 
     private void PushReturnValue((MethodInfo mi, nint ptr) tuple)
     {
-        if (tuple.mi.ReturnType == typeof(long) || tuple.mi.ReturnType == typeof(int))
+        var rett = tuple.mi.ReturnType;
+
+        if (rett == typeof(long) || rett == typeof(int) || rett == typeof(nint))
             sm.Push(rax);
-        else if (tuple.mi.ReturnType == typeof(double))
+        else if (rett == typeof(double))
             sm.Push(xmm0);
-        else if (tuple.mi.ReturnType == typeof(void))
+        else if (rett == typeof(void))
             sm.Skip(); // just skip. Need to be dropped
         else Thrower.Throw(new Exception("Invalid type"));
     }

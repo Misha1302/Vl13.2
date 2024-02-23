@@ -1,5 +1,6 @@
 ﻿namespace Vl13._2;
 
+using System.Runtime.InteropServices;
 using Math = Math;
 
 public static class VlRuntimeHelper
@@ -16,6 +17,16 @@ public static class VlRuntimeHelper
 
     private static bool AreEqualRel(double a, double b, double epsilon) =>
         Math.Abs(a - b) <= epsilon * Math.Max(Math.Abs(a), Math.Abs(b));
+
+    public static long Alloc(int bytes)
+    {
+        var ptr = Marshal.AllocCoTaskMem(bytes);
+
+        for (var i = 0; i < bytes; i++)
+            Marshal.WriteByte(ptr, i, 0);
+
+        return ptr;
+    }
 
     public static int WriteNumbers(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10,
         int a11)

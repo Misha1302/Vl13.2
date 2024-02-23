@@ -14,22 +14,22 @@ public class EnterLeaveFunctionManager(
     {
         asm.Label(ref labelsManager.GetOrAddLabel("return_label"));
 
-        sm.PopReg(AssemblerRegisters.rax);
-        asm.mov(AssemblerRegisters.rsp, AssemblerRegisters.rbp);
-        asm.pop(AssemblerRegisters.rdi);
-        asm.pop(AssemblerRegisters.rsi);
-        asm.pop(AssemblerRegisters.rbp);
+        sm.PopReg(rax);
+        asm.mov(rsp, rbp);
+        asm.pop(rdi);
+        asm.pop(rsi);
+        asm.pop(rbp);
         asm.ret();
     }
 
     public void Prolog()
     {
-        asm.push(AssemblerRegisters.rbp);
-        asm.push(AssemblerRegisters.rsi);
-        asm.push(AssemblerRegisters.rdi);
-        asm.mov(AssemblerRegisters.rbp, AssemblerRegisters.rsp);
+        asm.push(rbp);
+        asm.push(rsi);
+        asm.push(rdi);
+        asm.mov(rbp, rsp);
 
-        asm.sub(AssemblerRegisters.rsp, imageInfo.GetTotalSize());
+        asm.sub(rsp, imageInfo.GetTotalSize());
     }
 
     public void Body()
