@@ -48,7 +48,7 @@ public class AsmFunctionBuilder : VlImageInfo
     public void LessThan(Action a, Action b) => BinaryOp(a, b, Lt);
     public void Add(Action a, Action b) => BinaryOp(a, b, Add);
 
-    private void BinaryOp(Action a, Action b, Action op)
+    private static void BinaryOp(Action a, Action b, Action op)
     {
         a();
         b();
@@ -69,6 +69,20 @@ public class AsmFunctionBuilder : VlImageInfo
                         else PushF(1.0);
                     }
                 )
+        );
+    }
+
+    public void For(Action init, Action cond, Action endOfBody, Action body)
+    {
+        init();
+
+        While(
+            cond,
+            () =>
+            {
+                body();
+                endOfBody();
+            }
         );
     }
 }

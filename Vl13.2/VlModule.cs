@@ -2,5 +2,5 @@
 
 public class VlModule
 {
-    public readonly List<VlImageInfo> ImageFactories = [];
+    public List<VlImageInfo> ImageFactories = [];
 }

@@ -6,15 +6,17 @@ public static class OpTypeExtensions
     {
         if (value.IsPush()) return 1;
         if (value.IsDup()) return 1;
+        if (value.IsCall()) return 1;
+        if (value.IsLoad()) return 1;
+
+        if (value.IsConv()) return 0;
+        if (value.IsBranch()) return 0;
+        if (value.IsSetLabel()) return 0;
+
+        if (value.IsMathOp()) return -1;
+        if (value.IsCmp()) return -1;
         if (value.IsDrop()) return -1;
         if (value.IsStore()) return -1;
-        if (value.IsLoad()) return 1;
-        if (value.IsConv()) return 0;
-        if (value.IsCmp()) return -1;
-        if (value.IsBranch()) return 0;
-        if (value.IsMathOp()) return -1;
-        if (value.IsSetLabel()) return 0;
-        if (value.IsCall()) return 1;
 
         return Thrower.Throw<int>(new ArgumentOutOfRangeException());
     }

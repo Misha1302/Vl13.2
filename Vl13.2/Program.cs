@@ -1,4 +1,6 @@
-﻿using Vl13._2;
+﻿using System.Diagnostics;
+using Iced.Intel;
+using Vl13._2;
 
 /*
 
@@ -16,39 +18,57 @@ The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered non
 
 unsafe
 {
-    var vlModule = new VlModule();
     var main = new AsmFunctionBuilder();
 
     main.DeclareLocals(new LocalInfo(AsmType.F64, "i"));
-    main.SetLocal("i", () => main.PushF(0.000));
 
-
-    main.While(
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(10.0)),
+    main.For(
+        () => main.SetLocal("i", () => main.PushF(0.000)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(1_000_000_000.0)),
+        () => main.SetLocal("i", () => main.Add(() => main.GetLocal("i"), () => main.PushF(1.111))),
         () =>
         {
-            main.GetLocal("i");
-            main.WriteLine(typeof(double));
-            main.Drop();
-            main.SetLocal("i", () => main.Add(() => main.GetLocal("i"), () => main.PushF(1.111)));
+            //main.GetLocal("i");
+            //main.WriteLine(typeof(double));
+            //main.Drop();
         }
     );
 
-    main.WriteLine(null);
-
+    main.GetLocal("i");
     main.Ret();
 
 
-    vlModule.ImageFactories.Add(main);
+    var vlModule = new VlModule { ImageFactories = [main] };
     var translator = new VlTranslator(vlModule);
-    var asm = translator.Translate();
 
-    AsmExecutor.PrintCode(asm);
     Console.WriteLine();
 
-    var startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-    var value = ((delegate*<long>)AsmExecutor.MakeFunction(asm))();
-    Console.WriteLine($"Execution time: {DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime}");
+    delegate*<long> nativeFunction = null;
+    long value = 0;
+    Assembler asm = null!;
+
+    var compilationTime = MeasureTime(
+        () => nativeFunction = (delegate*<long>)AsmExecutor.MakeFunction(asm = translator.Translate())
+    );
+
+    AsmExecutor.PrintCode(asm);
+
+    var executionTime = MeasureTime(
+        () => value = nativeFunction()
+    );
+
+    Console.WriteLine($"Compilation time: {compilationTime}");
+    Console.WriteLine($"Execution time: {executionTime}");
 
     Console.WriteLine($"Res: {value}; {BitConverter.Int64BitsToDouble(value)}");
+}
+
+return;
+
+
+long MeasureTime(Action method)
+{
+    var sw = Stopwatch.StartNew();
+    method();
+    return sw.ElapsedMilliseconds;
 }
