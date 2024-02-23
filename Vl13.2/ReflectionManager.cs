@@ -5,7 +5,8 @@ using System.Runtime.CompilerServices;
 
 public static class ReflectionManager
 {
-    private static readonly Dictionary<(Type, string), (MethodInfo mi, nint ptr)> _dict = new();
+    private static readonly Dictionary<(Type type, string methodName, Type[]? parameters), (MethodInfo mi, nint ptr)>
+        _dict = new();
 
     public static ulong GetPtr(Type type, string methodName, Type[]? parameters = null) =>
         (ulong)Get(type, methodName, parameters).ptr;
@@ -15,7 +16,7 @@ public static class ReflectionManager
 
     public static (MethodInfo mi, nint ptr) Get(Type type, string methodName, Type[]? parameters = null)
     {
-        if (_dict.TryGetValue((type, methodName), out var res))
+        if (_dict.TryGetValue((type, methodName, parameters), out var res))
             return res;
 
         var mi = parameters == null
@@ -30,7 +31,7 @@ public static class ReflectionManager
         RuntimeHelpers.PrepareMethod(mi.MethodHandle);
 
         var value = (mi, mi.MethodHandle.GetFunctionPointer());
-        _dict.Add((type, methodName), value);
+        _dict.Add((type, methodName, parameters), value);
         return value;
     }
 

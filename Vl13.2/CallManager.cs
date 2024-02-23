@@ -5,7 +5,8 @@ using Iced.Intel;
 
 public class CallManager(Assembler asm, StackManager sm)
 {
-    private static readonly AssemblerRegister64[] _arr = [rcx, rdx, r8, r9];
+    private static readonly (AssemblerRegister64, AssemblerRegisterXMM)[] _arr =
+        [(rcx, xmm0), (rdx, xmm1), (r8, xmm2), (r9, xmm3)];
 
     private static void LoadArgsSharp(MethodBase mi, Assembler asm, StackManager sm, out int allocatedBytes)
     {
@@ -22,7 +23,9 @@ public class CallManager(Assembler asm, StackManager sm)
         for (var index = parameters.Length - 1; index >= 0; index--)
             if (index < _arr.Length)
             {
-                sm.PopReg(_arr[index]);
+                if (sm.GetTypeInTop() == AsmType.I64)
+                    sm.PopReg(_arr[index].Item1);
+                else sm.PopReg(_arr[index].Item2);
             }
             else
             {

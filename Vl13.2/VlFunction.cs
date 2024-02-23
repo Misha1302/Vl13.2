@@ -56,48 +56,50 @@ public class VlFunction
     {
         switch (op.OpType)
         {
-            case OpType.PushI64:
-                PushConst(op.Arg<long>(0));
-                break;
-            case OpType.PushF64:
-                PushConst(op.Arg<double>(0));
+            case OpType.Push:
+                if (op.Params?[0] is long)
+                    PushConst(op.Arg<long>(0));
+                else PushConst(op.Arg<double>(0));
                 break;
             case OpType.Drop:
                 _sm.Drop();
                 break;
-            case OpType.StoreI64:
-                _sm.PopRegs(rax, r10); // value, reference
+            case OpType.Store64:
+                _sm.PopRegs(r10, rax); // reference, value
                 _asm.mov(__[r10], rax); // *(&variable) = value
                 break;
-            case OpType.StoreI32:
-                _sm.PopRegs(rax, r10); // value, reference
+            case OpType.Store32:
+                _sm.PopRegs(r10, rax); // reference, value
                 _asm.mov(__[r10], eax); // *(&variable) = value
                 break;
-            case OpType.StoreI16:
-                _sm.PopRegs(rax, r10); // value, reference
+            case OpType.Store16:
+                _sm.PopRegs(r10, rax); // reference, value
                 _asm.mov(__[r10], ax); // *(&variable) = value
                 break;
-            case OpType.StoreI8:
-                _sm.PopRegs(rax, r10); // value, reference
+            case OpType.Store8:
+                _sm.PopRegs(r10, rax); // reference, value
                 _asm.mov(__[r10], al); // *(&variable) = value
                 break;
-            case OpType.StoreF64:
-                _sm.PopRegs(rax, r10); // equals to storei64 'cause no need to save value to xmm0
-                _asm.mov(__[r10], rax);
+            case OpType.Load64:
+                MultitypeOp(() => _sm.Load64(AsmType.I64), () => _sm.Load64(AsmType.F64));
                 break;
-            case OpType.LoadI64:
-                _sm.LoadI64();
+            case OpType.Load32:
+                MultitypeOp(_sm.LoadI32,
+                    () => Thrower.Throw(
+                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                );
                 break;
-            case OpType.LoadI32:
-                _sm.LoadI32();
+            case OpType.Load16:
+                MultitypeOp(_sm.LoadI16,
+                    () => Thrower.Throw(
+                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                );
                 break;
-            case OpType.LoadI16:
-                _sm.LoadI16();
-                break;
-            case OpType.LoadI8:
-                _sm.LoadI8();
-                break;
-            case OpType.LoadF64:
+            case OpType.Load8:
+                MultitypeOp(_sm.LoadI8,
+                    () => Thrower.Throw(
+                        new InvalidOperationException("This operation cannot be applyed to floating point value"))
+                );
                 break;
             case OpType.I8ToI64:
                 break;
@@ -116,12 +118,25 @@ public class VlFunction
             case OpType.F64ToI64:
                 break;
             case OpType.Eq:
-                _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.EqI)));
+                if (_sm.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.EqI)));
+                else if (_sm.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.EqF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Neq:
-                _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.NeqI)));
+                if (_sm.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.NeqI)));
+                else if (_sm.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.NeqF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Lt:
+                if (_sm.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LtI)));
+                else if (_sm.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LtF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Le:
                 break;
@@ -141,37 +156,33 @@ public class VlFunction
             case OpType.Ret:
                 _asm.jmp(_labelsManager.GetOrAddLabel("return_label"));
                 break;
-            case OpType.AddI64:
-                BinaryOperation(_asm.add);
+            case OpType.Add:
+                MultitypeOp(() => BinaryOperation(_asm.add), () => BinaryOperation(_asm.addsd));
                 break;
-            case OpType.AddF64:
-                BinaryOperation(_asm.addsd);
+            case OpType.Sub:
+                MultitypeOp(() => BinaryOperation(_asm.sub), () => BinaryOperation(_asm.subsd));
                 break;
-            case OpType.SubI64:
-                BinaryOperation(_asm.sub);
+            case OpType.Mul:
+                MultitypeOp(() => BinaryOperation(_asm.imul), () => BinaryOperation(_asm.mulsd));
                 break;
-            case OpType.SubF64:
-                BinaryOperation(_asm.subsd);
+            case OpType.Div:
+                MultitypeOp(() =>
+                {
+                    _asm.xor(rdx, rdx);
+                    BinaryOperation((_, b) => _asm.idiv(b));
+                }, () => BinaryOperation(_asm.divsd));
                 break;
-            case OpType.MulI64:
-                BinaryOperation(_asm.imul);
-                break;
-            case OpType.MulF64:
-                BinaryOperation(_asm.mulsd);
-                break;
-            case OpType.DivI64:
-                _asm.xor(rdx, rdx);
-                BinaryOperation((_, b) => _asm.idiv(b));
-                break;
-            case OpType.DivF64:
-                BinaryOperation(_asm.divsd);
-                break;
-            case OpType.ModI64:
-                _asm.xor(rdx, rdx);
-                BinaryOperation((_, b) => _asm.idiv(b));
-                break;
-            case OpType.ModF64:
-                _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.RemF64)));
+            case OpType.Mod:
+                MultitypeOp(() =>
+                    {
+                        _asm.xor(rdx, rdx);
+                        BinaryOperation((_, b) => _asm.idiv(b), rdx);
+                    },
+                    () => _callManager.Call(
+                        ReflectionManager.Get(typeof(VlRuntimeHelper),
+                            nameof(VlRuntimeHelper.RemF64))
+                    )
+                );
                 break;
             case OpType.SetLabel:
                 _asm.Label(ref _labelsManager.GetOrAddLabel(op.Arg<string>(0)));
@@ -191,7 +202,7 @@ public class VlFunction
             case OpType.LocAddress:
                 _asm.mov(rax, rbp);
                 _asm.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
-                _sm.Push(rax);
+                _sm.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
             case OpType.Dup:
                 _sm.Dup();
@@ -203,7 +214,7 @@ public class VlFunction
     }
 
     private void PushConst<T>(T value) where T : struct =>
-        _sm.Push(__[_dataManager.DefineData(value)]);
+        _sm.Push(__[_dataManager.DefineData(value)], value is int or long ? AsmType.I64 : AsmType.F64);
 
     private void CmpAndJump(Op op, int cmpValue)
     {
@@ -212,14 +223,15 @@ public class VlFunction
         _asm.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
 
-    private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act)
+    private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,
+        AssemblerRegister64 outputReg = default)
     {
         _sm.PopReg(r10);
         _sm.PopReg(rax);
 
         act(rax, r10);
 
-        _sm.Push(rax);
+        _sm.Push(outputReg == default ? rax : outputReg);
     }
 
     private void BinaryOperation(Action<AssemblerRegisterXMM, AssemblerRegisterXMM> act)
@@ -230,5 +242,14 @@ public class VlFunction
         act(xmm0, xmm1);
 
         _sm.Push(xmm0);
+    }
+
+    private void MultitypeOp(Action i64, Action f64)
+    {
+        if (_sm.GetTypeInTop() == AsmType.I64)
+            i64();
+        else if (_sm.GetTypeInTop() == AsmType.F64)
+            f64();
+        else Thrower.Throw(new InvalidOperationException("Invalid type"));
     }
 }

@@ -3,24 +3,21 @@
 public enum OpType
 {
     // ------- stack
-    PushI64,
-    PushF64,
+    Push,
 
     Drop,
     Dup,
 
     // ------- memory
-    StoreI64,
-    StoreI32,
-    StoreI16,
-    StoreI8,
-    StoreF64,
+    Store64,
+    Store32,
+    Store16,
+    Store8,
 
-    LoadI64,
-    LoadI32,
-    LoadI16,
-    LoadI8,
-    LoadF64,
+    Load64,
+    Load32,
+    Load16,
+    Load8,
 
     LocAddress,
 
@@ -51,20 +48,11 @@ public enum OpType
     Ret,
 
     // ------- math ops
-    AddI64,
-    AddF64,
-
-    SubI64,
-    SubF64,
-
-    MulI64,
-    MulF64,
-
-    DivI64,
-    DivF64,
-
-    ModI64,
-    ModF64,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
 
     // ------- labels
     SetLabel,
