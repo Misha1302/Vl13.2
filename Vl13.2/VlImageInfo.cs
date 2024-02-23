@@ -1,11 +1,40 @@
 ﻿namespace Vl13._2;
 
-public class VlImageInfo
+public partial class VlImageInfo
 {
     public readonly VlImage Image = new();
-    
-    public int LocalSizeInBytes = 0;
 
+    public int GetStackSizeInBytes()
+    {
+        var cur = 0;
+        var max = 0;
+
+        foreach (var op in Image.Ops)
+        {
+            cur += op.OpType.StackOutput();
+            max = Math.Max(max, cur);
+        }
+
+        return max * 8 + 16; // 16 - Reserved space for temporary computing
+    }
+
+    public int GetLocalSizeInBytes()
+    {
+        return Image.Ops
+            .Where(x => x.OpType == OpType.LocAddress)
+            .DistinctBy(x => x.Arg<string>(0))
+            .Count() * 8;
+    }
+
+    public static int RoundUpSize(int stackSize) =>
+        stackSize % 16 == 0 ? stackSize : stackSize + 8;
+
+    public int GetTotalSize() =>
+        RoundUpSize(GetLocalSizeInBytes() + GetStackSizeInBytes());
+}
+
+public partial class VlImageInfo
+{
     public void PushI64(long i) => Image.Emit(new Op(OpType.PushI64, i));
     public void PushF64(double d) => Image.Emit(new Op(OpType.PushF64, d));
     public void Drop() => Image.Emit(new Op(OpType.Drop, null));

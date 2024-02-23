@@ -2,29 +2,14 @@
 
 using Iced.Intel;
 
-public class StackManager(int offset)
+public class StackManager(Assembler asm, StackPositioner sp)
 {
-    private int _curStackPos = offset + 8;
+    public void PopReg(AssemblerRegister64 reg) => asm.mov(reg, sp.Prev());
+    public void PopReg(AssemblerRegisterXMM reg) => asm.movq(reg, sp.Prev());
 
-    private AssemblerMemoryOperand StackPos =>
-        AssemblerRegisters.__[AssemblerRegisters.rbp - _curStackPos];
+    public void Push(AssemblerRegister64 reg) => asm.mov(sp.Next(), reg);
+    public void Push(AssemblerRegisterXMM reg) => asm.movq(sp.Next(), reg);
 
-    public AssemblerMemoryOperand Next()
-    {
-        var mem = StackPos;
-        _curStackPos += 8;
-        return mem;
-    }
-
-    public AssemblerMemoryOperand Prev()
-    {
-        if (_curStackPos <= offset)
-            Thrower.Throw(new InvalidOperationException("Stack is clear"));
-
-        _curStackPos -= 8;
-        return StackPos;
-    }
-
-    public AssemblerMemoryOperand Peek() =>
-        StackPos;
+    public void Drop() => sp.Prev();
+    public void Skip() => sp.Next();
 }

@@ -23,11 +23,11 @@ public class CallManager(Assembler asm, StackManager sm)
         for (var index = parameters.Length - 1; index >= 0; index--)
             if (index < _arr.Length)
             {
-                asm.mov(_arr[index], sm.Prev());
+                sm.PopReg(_arr[index]);
             }
             else
             {
-                asm.mov(rax, sm.Prev());
+                sm.PopReg(rax);
                 asm.push(rax);
                 allocatedBytes += 8;
             }
@@ -52,11 +52,11 @@ public class CallManager(Assembler asm, StackManager sm)
     private void PushReturnValue((MethodInfo mi, nint ptr) tuple)
     {
         if (tuple.mi.ReturnType == typeof(long) || tuple.mi.ReturnType == typeof(int))
-            asm.mov(sm.Next(), rax);
+            sm.Push(rax);
         else if (tuple.mi.ReturnType == typeof(double))
-            asm.movq(sm.Next(), xmm0);
+            sm.Push(xmm0);
         else if (tuple.mi.ReturnType == typeof(void))
-            sm.Next(); // just skip. Need to be dropped
+            sm.Skip(); // just skip. Need to be dropped
         else Thrower.Throw(new Exception("Invalid type"));
     }
 }

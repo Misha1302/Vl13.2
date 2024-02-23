@@ -9,13 +9,15 @@ The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered non
 */
 
 // TODO: add debug data
-// TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
+// TODO: add doubles 
 // TODO: add functions
+// TODO: implement all/most instructions
+// TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
 
 unsafe
 {
     var vlModule = new VlModule();
-    var vlFunction = new VlImageInfo { LocalSizeInBytes = 16 };
+    var vlFunction = new VlImageInfo();
 
 
     vlFunction.LocAddress("i"); // i = 0
@@ -28,14 +30,14 @@ unsafe
     // i != 100_000
     vlFunction.LocAddress("i");
     vlFunction.LoadI64();
-    vlFunction.PushI64(1_000_000_000);
+    vlFunction.PushI64(1_000);
     vlFunction.Neq();
     vlFunction.BrZero("label_end"); // if false
 
-    // vlFunction.LocAddress("i");
-    // vlFunction.LoadI64();
-    // vlFunction.CallSharp(typeof(Console), nameof(Console.WriteLine), [typeof(long)]);
-    // vlFunction.Drop();
+    vlFunction.LocAddress("i");
+    vlFunction.LoadI64();
+    vlFunction.CallSharp(typeof(Console), nameof(Console.WriteLine), [typeof(long)]);
+    vlFunction.Drop();
 
     // i = i + 1
     vlFunction.LocAddress("i"); // first arg for store

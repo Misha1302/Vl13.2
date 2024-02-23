@@ -8,99 +8,44 @@ using static Iced.Intel.AssemblerRegisters;
 /// </summary>
 public class VlFunction
 {
-    private readonly VlImageInfo _vlImageFactory;
+    private readonly VlImageInfo _imageInfo;
 
-    private readonly LabelsManager _labelsManager;
-    private readonly Dictionary<Label, long> _keyLabelValueData = new();
     private readonly Assembler _asm;
 
+    private readonly EnterLeaveFunctionManager _functionManager;
+    private readonly DataManager _dataManager;
+    private readonly LabelsManager _labelsManager;
     private readonly StackManager _sm;
     private readonly CallManager _callManager;
-    private readonly LocalsManager _localsManager = new();
+    private readonly LocalsManager _localsManager;
 
-    public VlFunction(VlImageInfo vlImageFactory, Assembler asm)
+    public VlFunction(VlImageInfo imageInfo, Assembler asm)
     {
         _asm = asm;
-        _vlImageFactory = vlImageFactory;
+        _imageInfo = imageInfo;
+
+        _localsManager = new LocalsManager();
+
         _labelsManager = new LabelsManager(_asm);
-        _sm = new StackManager(_vlImageFactory.LocalSizeInBytes);
+        _dataManager = new DataManager(_asm);
+
+        _sm = new StackManager(_asm, new StackPositioner(_imageInfo.GetLocalSizeInBytes()));
+        _functionManager = new EnterLeaveFunctionManager(_asm, _sm, _imageInfo, _labelsManager, EmitOp);
         _callManager = new CallManager(_asm, _sm);
-    }
-
-    private int StackSizeInBytes
-    {
-        get
-        {
-            var stackSize = CalcStackSize();
-            return stackSize * 8 % 16 == 0 ? stackSize * 8 : stackSize * 8 + 8;
-        }
-    }
-
-    private int CalcStackSize()
-    {
-        var cur = 0;
-        var max = 0;
-
-        foreach (var op in _vlImageFactory.Image.Ops)
-        {
-            cur += op.OpType.StackOutput();
-            max = Math.Max(max, cur);
-        }
-
-        return max + 16; // 16 - Reserved space for temporary computing
     }
 
     public void Translate()
     {
         _labelsManager.GetOrAddLabel("return_label");
 
-        if (_vlImageFactory.Image.Ops[^1].OpType != OpType.Ret)
+        if (_imageInfo.Image.Ops[^1].OpType != OpType.Ret)
             Thrower.Throw(new InvalidOperationException());
 
-        Prolog();
-        Body();
-        Epilogue();
+        _functionManager.Prolog();
+        _functionManager.Body();
+        _functionManager.Epilogue();
 
-        EmitData();
-    }
-
-    private void EmitData()
-    {
-        foreach (var pair in _keyLabelValueData)
-        {
-            var label = pair.Key;
-            _asm.Label(ref label);
-
-            _asm.dq(pair.Value);
-        }
-    }
-
-    private void Body()
-    {
-        foreach (var op in _vlImageFactory.Image.Ops)
-            EmitOp(op);
-    }
-
-    private void Epilogue()
-    {
-        _asm.Label(ref _labelsManager.GetOrAddLabel("return_label"));
-
-        PopReg(rax);
-        _asm.mov(rsp, rbp);
-        _asm.pop(rdi);
-        _asm.pop(rsi);
-        _asm.pop(rbp);
-        _asm.ret();
-    }
-
-    private void Prolog()
-    {
-        _asm.push(rbp);
-        _asm.push(rsi);
-        _asm.push(rdi);
-        _asm.mov(rbp, rsp);
-
-        _asm.sub(rsp, _vlImageFactory.LocalSizeInBytes + StackSizeInBytes);
+        _dataManager.EmitData();
     }
 
     private void EmitOp(Op op)
@@ -114,11 +59,11 @@ public class VlFunction
                 PushConstF64(op.Arg<double>(0));
                 break;
             case OpType.Drop:
-                _sm.Prev();
+                _sm.Drop();
                 break;
             case OpType.StoreI64:
-                PopReg(rax); // value
-                PopReg(r10); // reference
+                _sm.PopReg(rax); // value
+                _sm.PopReg(r10); // reference
                 _asm.mov(__[r10], rax); // *(&variable) = value
                 break;
             case OpType.StoreI32:
@@ -130,9 +75,9 @@ public class VlFunction
             case OpType.StoreF64:
                 break;
             case OpType.LoadI64:
-                PopReg(rax); // reference
-                _asm.mov(rax, __[rax]);
-                _asm.mov(_sm.Next(), rax); // *(address) 
+                _sm.PopReg(rax); // reference
+                _asm.mov(rax, __[rax]); // *value
+                _sm.Push(rax); // *value
                 break;
             case OpType.LoadI32:
                 break;
@@ -211,7 +156,7 @@ public class VlFunction
                 break;
             case OpType.ModI64:
                 _asm.xor(rdx, rdx);
-                BinaryOperation((_, b) => _asm.idiv(b), rdx);
+                BinaryOperation((_, b) => _asm.idiv(b));
                 break;
             case OpType.ModF64:
                 _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.RemF64)));
@@ -234,8 +179,7 @@ public class VlFunction
             case OpType.LocAddress:
                 _asm.mov(rax, rbp);
                 _asm.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
-
-                _asm.mov(_sm.Next(), rax);
+                _sm.Push(rax);
                 break;
             default:
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());
@@ -245,95 +189,40 @@ public class VlFunction
 
     private void PushConstF64(double value)
     {
-        _asm.mov(rax, __[DefineData(BitConverter.DoubleToInt64Bits(value))]);
-        _asm.mov(_sm.Next(), rax);
+        _asm.mov(rax, __[_dataManager.DefineData(value)]);
+        _sm.Push(rax);
     }
 
     private void PushConstI64(long value)
     {
-        _asm.mov(rax, __[DefineData(value)]);
-        _asm.mov(_sm.Next(), rax);
+        _asm.mov(rax, __[_dataManager.DefineData(value)]);
+        _sm.Push(rax);
     }
 
     private void CmpAndJump(Op op, int cmdValue)
     {
-        PopReg(rax);
+        _sm.PopReg(rax);
         _asm.cmp(rax, cmdValue);
         _asm.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
 
-    private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,
-        AssemblerRegister64 outputReg = default)
+    private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act)
     {
-        PopReg(r10);
-        PopReg(rax);
+        _sm.PopReg(r10);
+        _sm.PopReg(rax);
 
         act(rax, r10);
 
-        _asm.mov(_sm.Next(), outputReg == default ? rax : outputReg);
+        _sm.Push(rax);
     }
 
-    private void BinaryOperation(Action<AssemblerRegisterXMM, AssemblerRegisterXMM> act,
-        AssemblerRegisterXMM outputReg = default)
+    private void BinaryOperation(Action<AssemblerRegisterXMM, AssemblerRegisterXMM> act)
     {
-        PopReg(xmm1);
-        PopReg(xmm0);
+        _sm.PopReg(xmm1);
+        _sm.PopReg(xmm0);
 
         act(xmm0, xmm1);
 
-        _asm.movq(_sm.Next(), outputReg == default ? xmm0 : outputReg);
-    }
-
-    private void PopReg(AssemblerRegister64 reg) =>
-        _asm.mov(reg, _sm.Prev());
-
-    private void PopReg(AssemblerRegisterXMM reg) =>
-        _asm.movq(reg, _sm.Prev());
-
-    private Label DefineData(long value)
-    {
-        var l = _asm.CreateLabel($"_data[{value}][{BitConverter.Int64BitsToDouble(value)}]");
-        _keyLabelValueData.Add(l, value);
-        return l;
-    }
-}
-
-public class LocalsManager
-{
-    private int _address = 8;
-
-    private readonly GetOrAddCollection<int> _col;
-
-    public LocalsManager()
-    {
-        _col = new GetOrAddCollection<int>(GetNextAddress);
-    }
-
-    private int GetNextAddress(string name)
-    {
-        _address += 8;
-        return _address;
-    }
-
-    public int GetOrAddLocal(string name) => _col.GetOrAdd(name);
-}
-
-public class LabelsManager(Assembler asm)
-{
-    private readonly GetOrAddCollection<Label> _col = new(asm.CreateLabel);
-
-    public ref Label GetOrAddLabel(string name) => ref _col.GetOrAdd(name);
-}
-
-public class GetOrAddCollection<T>(Func<string, T> valueCreator)
-{
-    private readonly Dictionary<string, T> _labels = new();
-
-    public ref T GetOrAdd(string name)
-    {
-        if (!_labels.ContainsKey(name)) // no need to call func if key contains
-            _labels.Add(name, valueCreator(name));
-
-        return ref new[] { _labels[name] }[0];
+        _sm.Push(xmm0);
     }
 }
