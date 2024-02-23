@@ -2,7 +2,6 @@
 
 using System.Reflection;
 using Iced.Intel;
-using static Iced.Intel.AssemblerRegisters;
 
 public class CallManager(Assembler asm, StackManager sm)
 {

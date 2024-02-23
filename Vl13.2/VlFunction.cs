@@ -1,7 +1,6 @@
 ﻿namespace Vl13._2;
 
 using Iced.Intel;
-using static Iced.Intel.AssemblerRegisters;
 
 /// <summary>
 ///     https://en.wikipedia.org/wiki/X86_calling_conventions
@@ -38,8 +37,7 @@ public class VlFunction
     {
         _labelsManager.GetOrAddLabel("return_label");
 
-        if (_imageInfo.Image.Ops[^1].OpType != OpType.Ret)
-            Thrower.Throw(new InvalidOperationException());
+        ValidateImage();
 
         _functionManager.Prolog();
         _functionManager.Body();
@@ -48,42 +46,56 @@ public class VlFunction
         _dataManager.EmitData();
     }
 
+    private void ValidateImage()
+    {
+        if (_imageInfo.Image.Ops[^1].OpType != OpType.Ret)
+            Thrower.Throw(new InvalidOperationException());
+    }
+
     private void EmitOp(Op op)
     {
         switch (op.OpType)
         {
             case OpType.PushI64:
-                PushConstI64(op.Arg<long>(0));
+                PushConst(op.Arg<long>(0));
                 break;
             case OpType.PushF64:
-                PushConstF64(op.Arg<double>(0));
+                PushConst(op.Arg<double>(0));
                 break;
             case OpType.Drop:
                 _sm.Drop();
                 break;
             case OpType.StoreI64:
-                _sm.PopReg(rax); // value
-                _sm.PopReg(r10); // reference
+                _sm.PopRegs(rax, r10); // value, reference
                 _asm.mov(__[r10], rax); // *(&variable) = value
                 break;
             case OpType.StoreI32:
+                _sm.PopRegs(rax, r10); // value, reference
+                _asm.mov(__[r10], eax); // *(&variable) = value
                 break;
             case OpType.StoreI16:
+                _sm.PopRegs(rax, r10); // value, reference
+                _asm.mov(__[r10], ax); // *(&variable) = value
                 break;
             case OpType.StoreI8:
+                _sm.PopRegs(rax, r10); // value, reference
+                _asm.mov(__[r10], al); // *(&variable) = value
                 break;
             case OpType.StoreF64:
+                _sm.PopRegs(rax, r10); // equals to storei64 'cause no need to save value to xmm0
+                _asm.mov(__[r10], rax);
                 break;
             case OpType.LoadI64:
-                _sm.PopReg(rax); // reference
-                _asm.mov(rax, __[rax]); // *value
-                _sm.Push(rax); // *value
+                _sm.LoadI64();
                 break;
             case OpType.LoadI32:
+                _sm.LoadI32();
                 break;
             case OpType.LoadI16:
+                _sm.LoadI16();
                 break;
             case OpType.LoadI8:
+                _sm.LoadI8();
                 break;
             case OpType.LoadF64:
                 break;
@@ -187,22 +199,13 @@ public class VlFunction
         }
     }
 
-    private void PushConstF64(double value)
-    {
-        _asm.mov(rax, __[_dataManager.DefineData(value)]);
-        _sm.Push(rax);
-    }
+    private void PushConst<T>(T value) where T : struct =>
+        _sm.Push(__[_dataManager.DefineData(value)]);
 
-    private void PushConstI64(long value)
-    {
-        _asm.mov(rax, __[_dataManager.DefineData(value)]);
-        _sm.Push(rax);
-    }
-
-    private void CmpAndJump(Op op, int cmdValue)
+    private void CmpAndJump(Op op, int cmpValue)
     {
         _sm.PopReg(rax);
-        _asm.cmp(rax, cmdValue);
+        _asm.cmp(rax, cmpValue);
         _asm.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
 

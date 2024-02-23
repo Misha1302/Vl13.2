@@ -1,5 +1,6 @@
 ﻿namespace Vl13._2;
 
+using System.Runtime.CompilerServices;
 using Iced.Intel;
 
 public class DataManager(Assembler asm)
@@ -17,13 +18,10 @@ public class DataManager(Assembler asm)
         }
     }
 
-    public Label DefineData(long value)
+    public Label DefineData<T>(T value) where T : struct
     {
-        var label = asm.CreateLabel($"_data[{value}][{BitConverter.Int64BitsToDouble(value)}]");
-        _keyLabelValueData.Add(label, value);
+        var label = asm.CreateLabel($"_data[{value}]");
+        _keyLabelValueData.Add(label, Unsafe.BitCast<T, long>(value));
         return label;
     }
-
-    public Label DefineData(double value) =>
-        DefineData(BitConverter.DoubleToInt64Bits(value));
 }

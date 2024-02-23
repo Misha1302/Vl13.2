@@ -1,4 +1,5 @@
-﻿using Vl13._2;
+﻿using System.Runtime.InteropServices;
+using Vl13._2;
 
 /*
 
@@ -21,7 +22,7 @@ unsafe
 
 
     vlFunction.LocAddress("i"); // i = 0
-    vlFunction.PushI64(0);
+    vlFunction.PushI64(35);
     vlFunction.StoreI64();
 
 
@@ -30,13 +31,13 @@ unsafe
     // i != 100_000
     vlFunction.LocAddress("i");
     vlFunction.LoadI64();
-    vlFunction.PushI64(1_000);
+    vlFunction.PushI64(100);
     vlFunction.Neq();
     vlFunction.BrZero("label_end"); // if false
 
     vlFunction.LocAddress("i");
     vlFunction.LoadI64();
-    vlFunction.CallSharp(typeof(Console), nameof(Console.WriteLine), [typeof(long)]);
+    vlFunction.CallSharp(typeof(Console), nameof(Console.Write), [typeof(char)]);
     vlFunction.Drop();
 
     // i = i + 1
@@ -50,6 +51,11 @@ unsafe
     vlFunction.Br("label_start"); // continue
 
     vlFunction.SetLabel("label_end"); // end
+    
+    
+    vlFunction.CallSharp(typeof(Console), nameof(Console.WriteLine), []);
+    vlFunction.Drop();
+    
     vlFunction.Ret(); // return
 
 
@@ -62,6 +68,6 @@ unsafe
 
     var startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
     var value = ((delegate*<long>)AsmExecutor.MakeFunction(asm))();
-    Console.WriteLine(DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime);
-    Console.WriteLine($"res: {value}; {BitConverter.Int64BitsToDouble(value)}");
+    Console.WriteLine($"Execution time: {DateTimeOffset.Now.ToUnixTimeMilliseconds() - startTime}");
+    Console.WriteLine($"Res: {value}; {BitConverter.Int64BitsToDouble(value)}; {Marshal.PtrToStringAuto((nint)value)}");
 }
