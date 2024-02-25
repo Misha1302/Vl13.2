@@ -9,15 +9,13 @@ public class AsmFunctionBuilder : VlImageInfo
     public void WriteLine(Type? valueType) =>
         CallSharp(typeof(Console), nameof(Console.WriteLine), valueType == null ? [] : [valueType]);
 
-    public void DeclareLocals(params LocalInfo[] localInfos)
-    {
+    public void DeclareLocals(params LocalInfo[] localInfos) =>
         _localsList = localInfos.ToDictionary(x => x.Name, x => x);
-    }
 
     public void While(Action condition, Action body)
     {
-        var whileStart = $"while_start{Guid.NewGuid()}";
-        var whileEnd = $"while_end{Guid.NewGuid()}";
+        var whileStart = GenerateLabelName("while_start");
+        var whileEnd = GenerateLabelName("while_end");
 
         SetLabel(whileStart);
         // condition
@@ -85,4 +83,6 @@ public class AsmFunctionBuilder : VlImageInfo
             }
         );
     }
+
+    public void Mul(Action a, Action b) => BinaryOp(a, b, Mul);
 }

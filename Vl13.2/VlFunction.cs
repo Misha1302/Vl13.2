@@ -17,10 +17,12 @@ public class VlFunction
     private readonly StackManager _sm;
     private readonly CallManager _callManager;
     private readonly LocalsManager _localsManager;
+    private readonly IDebugData _debugData;
 
-    public VlFunction(VlImageInfo imageInfo, Assembler asm)
+    public VlFunction(VlImageInfo imageInfo, Assembler asm, IDebugData debugData)
     {
         _asm = asm;
+        _debugData = debugData;
         _imageInfo = imageInfo;
 
         _localsManager = new LocalsManager();
@@ -39,11 +41,19 @@ public class VlFunction
 
         ValidateImage();
 
+        EmitDebug(new Op(OpType.Prolog, null));
         _functionManager.Prolog();
+        EmitDebug(new Op(OpType.Body, null));
         _functionManager.Body();
+        EmitDebug(new Op(OpType.Epilogue, null));
         _functionManager.Epilogue();
 
         _dataManager.EmitData();
+    }
+
+    private void EmitDebug(Op op)
+    {
+        _debugData.Emit(op, _asm.Instructions.Count);
     }
 
     private void ValidateImage()
@@ -54,6 +64,8 @@ public class VlFunction
 
     private void EmitOp(Op op)
     {
+        EmitDebug(op);
+
         switch (op.OpType)
         {
             case OpType.Push:
@@ -173,8 +185,7 @@ public class VlFunction
                         BinaryOperation((_, b) => _asm.idiv(b), rdx);
                     },
                     () => _callManager.Call(
-                        ReflectionManager.Get(typeof(VlRuntimeHelper),
-                            nameof(VlRuntimeHelper.RemF64))
+                        ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.RemF64))
                     )
                 );
                 break;
@@ -200,6 +211,10 @@ public class VlFunction
                 break;
             case OpType.Dup:
                 _sm.Dup();
+                break;
+            case OpType.Prolog:
+            case OpType.Epilogue:
+            case OpType.Body:
                 break;
             default:
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());

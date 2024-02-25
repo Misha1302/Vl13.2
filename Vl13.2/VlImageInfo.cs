@@ -31,6 +31,9 @@ public partial class VlImageInfo
 
     public int GetTotalSize() =>
         RoundUpSize(GetLocalSizeInBytes() + GetStackSizeInBytes());
+
+    public static string GenerateLabelName(string name) =>
+        $"{name}{Guid.NewGuid().ToString()}";
 }
 
 public partial class VlImageInfo

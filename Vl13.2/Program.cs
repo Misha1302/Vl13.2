@@ -11,7 +11,6 @@ The registers RBX, RBP, RDI, RSI, RSP, R12, R13, R14, and R15 are considered non
 */
 
 // TODO: add debug data
-// TODO: add doubles 
 // TODO: add functions
 // TODO: implement all/most instructions
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
@@ -23,14 +22,14 @@ unsafe
     main.DeclareLocals(new LocalInfo(AsmType.F64, "i"));
 
     main.For(
-        () => main.SetLocal("i", () => main.PushF(0.000)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(1_000_000_000.0)),
-        () => main.SetLocal("i", () => main.Add(() => main.GetLocal("i"), () => main.PushF(1.111))),
+        () => main.SetLocal("i", () => main.PushF(1)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(100)),
+        () => main.SetLocal("i", () => main.Mul(() => main.GetLocal("i"), () => main.PushF(1.0111))),
         () =>
         {
-            //main.GetLocal("i");
-            //main.WriteLine(typeof(double));
-            //main.Drop();
+            main.GetLocal("i");
+            main.WriteLine(typeof(double));
+            main.Drop();
         }
     );
 
@@ -46,12 +45,16 @@ unsafe
     delegate*<long> nativeFunction = null;
     long value = 0;
     Assembler asm = null!;
+    DebugData debugData = null!;
 
     var compilationTime = MeasureTime(
-        () => nativeFunction = (delegate*<long>)AsmExecutor.MakeFunction(asm = translator.Translate())
-    );
+        () =>
+        {
+            debugData = new DebugData();
+            nativeFunction = (delegate*<long>)AsmExecutor.MakeFunction(asm = translator.Translate(debugData));
+        });
 
-    AsmExecutor.PrintCode(asm);
+    AsmExecutor.PrintCode(asm, debugData);
 
     var executionTime = MeasureTime(
         () => value = nativeFunction()

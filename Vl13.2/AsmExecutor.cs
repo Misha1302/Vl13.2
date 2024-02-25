@@ -11,10 +11,17 @@ public static class AsmExecutor
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
 
-    public static void PrintCode(Assembler asm)
+    public static void PrintCode(Assembler asm, DebugData debugData)
     {
-        foreach (var i in asm.Instructions)
+        for (var index = 0; index < asm.Instructions.Count; index++)
+        {
+            var i = asm.Instructions[index];
+            
+            foreach (var op in debugData.Data[index])
+                Console.WriteLine($"\n>>>>>> {op}");
+
             Console.WriteLine(i.ToString().Replace(",", ", "));
+        }
     }
 
     public static nint MakeFunction(Assembler asm)
