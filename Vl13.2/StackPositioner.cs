@@ -2,29 +2,29 @@
 
 using Iced.Intel;
 
-public class StackPositioner(int offset)
+public class StackPositioner(Assembler asm, AssemblerRegister64 index, AssemblerRegister64 pointer)
 {
-    private int _curStackPos = offset + 8;
-
     private AssemblerMemoryOperand StackPos =>
-        __[rbp - _curStackPos];
+        __[pointer + index * 8];
 
-    public AssemblerMemoryOperand Next()
-    {
-        var mem = StackPos;
-        _curStackPos += 8;
-        return mem;
-    }
+    public void Next(AssemblerRegister64 reg) =>
+        Next(() => asm.mov(StackPos, reg));
+
+    public void Next(AssemblerRegisterXMM reg) =>
+        Next(() => asm.movq(StackPos, reg));
 
     public AssemblerMemoryOperand Prev()
     {
-        if (_curStackPos <= offset)
-            Thrower.Throw(new InvalidOperationException("Stack is clear"));
-
-        _curStackPos -= 8;
+        asm.dec(index);
         return StackPos;
     }
 
-    public AssemblerMemoryOperand Peek() =>
-        StackPos;
+    public AssemblerMemoryOperand Peek() => StackPos;
+
+
+    public void Next(Action? act)
+    {
+        act?.Invoke();
+        asm.inc(index);
+    }
 }

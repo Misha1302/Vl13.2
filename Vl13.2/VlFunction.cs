@@ -11,18 +11,20 @@ public class VlFunction
 
     private readonly Assembler _asm;
 
-    private readonly EnterLeaveFunctionManager _functionManager;
     private readonly DataManager _dataManager;
     private readonly LabelsManager _labelsManager;
-    private readonly StackManager _sm;
     private readonly CallManager _callManager;
     private readonly LocalsManager _localsManager;
     private readonly IDebugData _debugData;
+    private readonly List<Label> _functionLabels;
+    private readonly StackManager _sm;
 
-    public VlFunction(VlImageInfo imageInfo, Assembler asm, IDebugData debugData)
+    public VlFunction(VlImageInfo imageInfo, Assembler asm, IDebugData debugData, List<Label> functionLabels,
+        StackManager sm)
     {
         _asm = asm;
         _debugData = debugData;
+        _functionLabels = functionLabels;
         _imageInfo = imageInfo;
 
         _localsManager = new LocalsManager();
@@ -30,25 +32,32 @@ public class VlFunction
         _labelsManager = new LabelsManager(_asm);
         _dataManager = new DataManager(_asm);
 
-        _sm = new StackManager(_asm, new StackPositioner(_imageInfo.GetLocalSizeInBytes()));
-        _functionManager = new EnterLeaveFunctionManager(_asm, _sm, _imageInfo, _labelsManager, EmitOp);
+        _sm = sm;
         _callManager = new CallManager(_asm, _sm);
     }
 
     public void Translate()
     {
+        _sm.AddTypes(_imageInfo.ArgTypes);
         _labelsManager.GetOrAddLabel("return_label");
 
         ValidateImage();
 
-        EmitDebug(new Op(OpType.Prolog, null));
-        _functionManager.Prolog();
-        EmitDebug(new Op(OpType.Body, null));
-        _functionManager.Body();
-        EmitDebug(new Op(OpType.Epilogue, null));
-        _functionManager.Epilogue();
+        var l = _functionLabels.Find(x => x.Name == _imageInfo.Name);
+        _asm.Label(ref l);
+
+        Prolog();
+        foreach (var op in _imageInfo.Image.Ops)
+            EmitOp(op);
 
         _dataManager.EmitData();
+    }
+
+    private void Prolog()
+    {
+        _asm.push(rbp);
+        _asm.mov(rbp, rsp);
+        _asm.sub(rsp, _imageInfo.GetTotalSize());
     }
 
     private void EmitDebug(Op op)
@@ -58,7 +67,7 @@ public class VlFunction
 
     private void ValidateImage()
     {
-        if (_imageInfo.Image.Ops[^1].OpType != OpType.Ret)
+        if (_imageInfo.Image.Ops[^1].OpType is not OpType.Ret and not OpType.End)
             Thrower.Throw(new InvalidOperationException());
     }
 
@@ -68,6 +77,40 @@ public class VlFunction
 
         switch (op.OpType)
         {
+            case OpType.Init:
+                _asm.push(rsi);
+                _asm.push(rdi);
+
+                _asm.push(r15);
+                _asm.push(r14);
+
+                _asm.mov(r14, 0);
+                _asm.mov(rcx, 2048);
+                _asm.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
+                _asm.mov(r15, rax);
+
+                break;
+            case OpType.End:
+                _sm.Pop(rax);
+
+                _asm.push(rax);
+                _asm.push(rax);
+                _asm.mov(rcx, r15);
+                _asm.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Free)));
+                _asm.pop(rax);
+                _asm.pop(rax);
+
+                _asm.pop(r14);
+                _asm.pop(r15);
+
+                _asm.pop(rdi);
+                _asm.pop(rsi);
+
+                _asm.mov(rsp, rbp);
+                _asm.pop(rbp);
+
+                _asm.ret();
+                break;
             case OpType.Push:
                 if (op.Params?[0] is long)
                     PushConst(op.Arg<long>(0));
@@ -160,7 +203,9 @@ public class VlFunction
                 CmpAndJump(op, 0);
                 break;
             case OpType.Ret:
-                _asm.jmp(_labelsManager.GetOrAddLabel("return_label"));
+                _asm.mov(rsp, rbp);
+                _asm.pop(rbp);
+                _asm.ret();
                 break;
             case OpType.Add:
                 MultitypeOp(() => BinaryOperation(_asm.add), () => BinaryOperation(_asm.addsd));
@@ -201,6 +246,12 @@ public class VlFunction
                 _callManager.Call(tuple);
                 break;
             case OpType.CallFunc:
+                _sm.SubTypes(op.Arg<int>(1));
+
+                var label = _functionLabels.Find(x => x.Name == op.Arg<string>(0));
+                _asm.call(label);
+
+                _sm.AddTypes([op.Arg<AsmType>(2)]);
                 break;
             case OpType.CallAddress:
                 break;
@@ -227,7 +278,7 @@ public class VlFunction
 
     private void CmpAndJump(Op op, int cmpValue)
     {
-        _sm.PopReg(rax);
+        _sm.Pop(rax);
         _asm.cmp(rax, cmpValue);
         _asm.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
@@ -235,8 +286,8 @@ public class VlFunction
     private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,
         AssemblerRegister64 outputReg = default)
     {
-        _sm.PopReg(r10);
-        _sm.PopReg(rax);
+        _sm.Pop(r10);
+        _sm.Pop(rax);
 
         act(rax, r10);
 
@@ -245,8 +296,8 @@ public class VlFunction
 
     private void BinaryOperation(Action<AssemblerRegisterXMM, AssemblerRegisterXMM> act)
     {
-        _sm.PopReg(xmm1);
-        _sm.PopReg(xmm0);
+        _sm.Pop(xmm1);
+        _sm.Pop(xmm0);
 
         act(xmm0, xmm1);
 

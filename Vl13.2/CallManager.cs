@@ -24,12 +24,12 @@ public class CallManager(Assembler asm, StackManager sm)
             if (index < _arr.Length)
             {
                 if (sm.GetTypeInTop() == AsmType.I64)
-                    sm.PopReg(_arr[index].Item1);
-                else sm.PopReg(_arr[index].Item2);
+                    sm.Pop(_arr[index].Item1);
+                else sm.Pop(_arr[index].Item2);
             }
             else
             {
-                sm.PopReg(rax);
+                sm.Pop(rax);
                 asm.push(rax);
                 allocatedBytes += 8;
             }

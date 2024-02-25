@@ -1,6 +1,6 @@
 ﻿namespace Vl13._2;
 
-public partial class VlImageInfo
+public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
 {
     public readonly VlImage Image = new();
 
@@ -11,7 +11,7 @@ public partial class VlImageInfo
 
         foreach (var op in Image.Ops)
         {
-            cur += op.OpType.StackOutput();
+            cur += op.StackOutput();
             max = Math.Max(max, cur);
         }
 
@@ -36,7 +36,7 @@ public partial class VlImageInfo
         $"{name}{Guid.NewGuid().ToString()}";
 }
 
-public partial class VlImageInfo
+public partial record VlImageInfo
 {
     public void PushI(long i) => Image.Emit(new Op(OpType.Push, i));
     public void PushF(double i) => Image.Emit(new Op(OpType.Push, i));
@@ -72,15 +72,14 @@ public partial class VlImageInfo
     public void Div() => Image.Emit(new Op(OpType.Div, null));
     public void Mod() => Image.Emit(new Op(OpType.Mod, null));
     public void SetLabel(string labelName) => Image.Emit(new Op(OpType.SetLabel, labelName));
+    public void CallFunc(string name, int argsCount, AsmType returnType) => Image.Emit(new Op(OpType.CallFunc, name, argsCount, returnType));
+    public void CallAddress() => Image.Emit(new Op(OpType.CallAddress, null));
+    public void Ret() => Image.Emit(new Op(OpType.Ret, null));
+    public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));
+    public void Dup() => Image.Emit(new Op(OpType.Dup, null));
+    public void Init() => Image.Emit(new Op(OpType.Init, null));
+    public void End() => Image.Emit(new Op(OpType.End, null));
 
     public void CallSharp(Type t, string name, Type[]? parameters = null) =>
         Image.Emit(new Op(OpType.CallSharp, t, name, parameters!));
-
-    public void CallFunc() => Image.Emit(new Op(OpType.CallFunc, null));
-    public void CallAddress() => Image.Emit(new Op(OpType.CallAddress, null));
-    public void Ret() => Image.Emit(new Op(OpType.Ret, null));
-
-    public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));
-
-    public void Dup() => Image.Emit(new Op(OpType.Dup, null));
 }

@@ -6,16 +6,22 @@ public class StackManager(Assembler asm, StackPositioner sp)
 {
     private readonly Stack<AsmType> _types = new();
 
+    public void AddTypes(AsmType[] asmTypes)
+    {
+        foreach (var asmType in asmTypes)
+            _types.Push(asmType);
+    }
+
     public AsmType GetTypeInTop() =>
         _types.Peek();
 
-    public void PopReg(AssemblerRegister64 reg)
+    public void Pop(AssemblerRegister64 reg)
     {
         asm.mov(reg, sp.Prev());
         _types.Pop();
     }
 
-    public void PopReg(AssemblerRegisterXMM reg)
+    public void Pop(AssemblerRegisterXMM reg)
     {
         asm.movq(reg, sp.Prev());
         _types.Pop();
@@ -24,13 +30,13 @@ public class StackManager(Assembler asm, StackPositioner sp)
     public void Push(AssemblerRegister64 reg)
     {
         _types.Push(AsmType.I64);
-        asm.mov(sp.Next(), reg);
+        sp.Next(reg);
     }
 
     public void Push(AssemblerRegisterXMM reg)
     {
         _types.Push(AsmType.F64);
-        asm.movq(sp.Next(), reg);
+        sp.Next(reg);
     }
 
     public void Drop()
@@ -42,60 +48,66 @@ public class StackManager(Assembler asm, StackPositioner sp)
     public void Skip()
     {
         _types.Push(AsmType.None);
-        sp.Next();
+        sp.Next(null);
     }
 
     public void PopRegs(params AssemblerRegister64[] regs) =>
-        Array.ForEach(regs, PopReg);
+        Array.ForEach(regs, Pop);
 
     public void Push(AssemblerMemoryOperand memOp, AsmType refType)
     {
         asm.mov(rax, memOp);
-        asm.mov(sp.Next(), rax);
+        sp.Next(rax);
         _types.Push(refType);
     }
 
     public void Load64(AsmType t)
     {
-        PopReg(rax);
+        Pop(rax);
         asm.mov(rax, __[rax]);
-        asm.mov(sp.Next(), rax);
+        sp.Next(rax);
         _types.Push(t);
     }
 
     public void LoadI32()
     {
-        PopReg(rax);
+        Pop(rax);
         asm.mov(eax, __[rax]);
-        asm.mov(sp.Next(), eax);
+        sp.Next(() => asm.mov(sp.Peek(), eax));
         _types.Push(AsmType.I64);
     }
 
     public void LoadI16()
     {
-        PopReg(rax);
+        Pop(rax);
         asm.mov(ax, __[rax]);
         asm.and(rax, ushort.MaxValue); // zero extra bits
-        asm.mov(sp.Next(), ax);
+        sp.Next(() => asm.mov(sp.Peek(), ax));
         _types.Push(AsmType.I64);
     }
 
     public void LoadI8()
     {
-        PopReg(rax);
+        Pop(rax);
         asm.mov(al, __[rax]);
         asm.and(rax, byte.MaxValue); // zero extra bits
-        asm.mov(sp.Next(), al);
+        sp.Next(() => asm.mov(sp.Peek(), al));
         _types.Push(AsmType.I64);
     }
 
 
     public void Dup() =>
-        Push(sp.Peek() + 8, GetTypeInTop());
+        sp.Next(null);
 
     public void PushAddress(AssemblerRegister64 reg, AsmType refType)
     {
         _types.Push(refType);
-        asm.mov(sp.Next(), reg);
+        sp.Next(reg);
+    }
+
+    public void SubTypes(int count)
+    {
+        for (var i = 0; i < count; i++)
+            _types.Pop();
     }
 }

@@ -65,5 +65,7 @@ public enum OpType
     // ------- others
     Prolog,
     Epilogue,
-    Body
+    Body,
+    Init,
+    End
 }

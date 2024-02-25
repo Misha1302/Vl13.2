@@ -1,5 +1,6 @@
 ﻿namespace Vl13._2;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Math = Math;
 
@@ -29,6 +30,10 @@ public static class VlRuntimeHelper
 
         return ptr;
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
+    public static void Free(long ptr) =>
+        Marshal.FreeCoTaskMem((nint)ptr);
 
     public static int WriteNumbers(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10,
         int a11)
