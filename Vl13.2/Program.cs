@@ -62,23 +62,23 @@ VlTranslator CreateTranslator()
 {
     var moduleBuilder = new VlModuleBuilder();
 
-    var main = moduleBuilder.AddFunction("main", [], AsmType.I64, [new LocalInfo(AsmType.F64, "i")]);
+    var main = moduleBuilder.AddFunction("main", [], AsmType.I64, [new LocalInfo(AsmType.I64, "i")]);
     main.For(
-        () => main.SetLocal("i", () => main.PushF(1)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(100)),
-        () => main.SetLocal("i", () => main.Mul(() => main.GetLocal("i"), () => main.PushF(1.0111))),
+        () => main.SetLocal("i", () => main.PushI(1)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(200_000_000)),
+        () => main.IncLoc("i"),
         () =>
         {
             main.CallFunc("square", () => main.GetLocal("i"));
-            main.WriteLine(typeof(double));
+            // main.WriteLine(typeof(long));
             main.Drop();
         }
     );
     main.Ret(() => main.GetLocal("i"));
 
 
-    var square = moduleBuilder.AddFunction("square", [new LocalInfo(AsmType.F64, "a")], AsmType.F64, []);
-    square.Ret(() => square.Mul(() => square.GetLocal("a"), () => square.GetLocal("a")));
+    var square = moduleBuilder.AddFunction("square", [new LocalInfo(AsmType.I64, "a")], AsmType.I64, []);
+    square.Ret(() => square.Mul(() => square.GetLocal("a"), () => square.Dup()));
 
 
     var vlTranslator = new VlTranslator(moduleBuilder.ImageInfos);

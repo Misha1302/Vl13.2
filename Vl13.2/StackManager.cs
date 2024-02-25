@@ -97,7 +97,7 @@ public class StackManager(Assembler asm, StackPositioner sp)
 
 
     public void Dup() =>
-        sp.Next(null);
+        Push(sp.Peek() - 8, GetTypeInTop());
 
     public void PushAddress(AssemblerRegister64 reg, AsmType refType)
     {
