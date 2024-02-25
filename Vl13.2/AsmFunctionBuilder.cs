@@ -1,6 +1,7 @@
 ﻿namespace Vl13._2;
 
-public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
+public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes, AsmType ReturnType)
+    : VlImageInfo(Name, ArgTypes, ReturnType)
 {
     private Dictionary<string, LocalInfo> _localsList = new();
 
@@ -92,11 +93,11 @@ public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes) : VlImageInfo(
 
     public void Mul(Action a, Action b) => BinaryOp(a, b, Mul);
 
-    public void CallFunc(string name, Action[] args, AsmType returnType)
+    public void CallFunc(string name, params Action[] args)
     {
         foreach (var arg in args)
             arg();
 
-        CallFunc(name, args.Length, returnType);
+        base.CallFunc(name);
     }
 }

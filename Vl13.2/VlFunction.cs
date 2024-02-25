@@ -5,49 +5,24 @@ using Iced.Intel;
 /// <summary>
 ///     https://en.wikipedia.org/wiki/X86_calling_conventions
 /// </summary>
-public class VlFunction
+public class VlFunction(VlImageInfo imageInfo, VlModule module)
 {
-    private readonly VlImageInfo _imageInfo;
-
-    private readonly Assembler _asm;
-
-    private readonly DataManager _dataManager;
-    private readonly LabelsManager _labelsManager;
-    private readonly CallManager _callManager;
-    private readonly LocalsManager _localsManager;
-    private readonly IDebugData _debugData;
-    private readonly List<Label> _functionLabels;
-    private readonly StackManager _sm;
-
-    public VlFunction(VlImageInfo imageInfo, Assembler asm, IDebugData debugData, List<Label> functionLabels,
-        StackManager sm)
-    {
-        _asm = asm;
-        _debugData = debugData;
-        _functionLabels = functionLabels;
-        _imageInfo = imageInfo;
-
-        _localsManager = new LocalsManager();
-
-        _labelsManager = new LabelsManager(_asm);
-        _dataManager = new DataManager(_asm);
-
-        _sm = sm;
-        _callManager = new CallManager(_asm, _sm);
-    }
+    private readonly DataManager _dataManager = new(module.Assembler);
+    private readonly LabelsManager _labelsManager = new(module.Assembler);
+    private readonly CallManager _callManager = new(module.Assembler, module.StackManager);
+    private readonly LocalsManager _localsManager = new();
 
     public void Translate()
     {
-        _sm.AddTypes(_imageInfo.ArgTypes);
+        module.StackManager.AddTypes(imageInfo.ArgTypes);
         _labelsManager.GetOrAddLabel("return_label");
 
         ValidateImage();
 
-        var l = _functionLabels.Find(x => x.Name == _imageInfo.Name);
-        _asm.Label(ref l);
+        module.Assembler.Label(ref module.FunctionsLabels[imageInfo.Name]);
 
         Prolog();
-        foreach (var op in _imageInfo.Image.Ops)
+        foreach (var op in imageInfo.Image.Ops)
             EmitOp(op);
 
         _dataManager.EmitData();
@@ -55,19 +30,19 @@ public class VlFunction
 
     private void Prolog()
     {
-        _asm.push(rbp);
-        _asm.mov(rbp, rsp);
-        _asm.sub(rsp, _imageInfo.GetTotalSize());
+        module.Assembler.push(rbp);
+        module.Assembler.mov(rbp, rsp);
+        module.Assembler.sub(rsp, imageInfo.GetTotalSize(module));
     }
 
     private void EmitDebug(Op op)
     {
-        _debugData.Emit(op, _asm.Instructions.Count);
+        module.DebugData.Emit(op, module.Assembler.Instructions.Count);
     }
 
     private void ValidateImage()
     {
-        if (_imageInfo.Image.Ops[^1].OpType is not OpType.Ret and not OpType.End)
+        if (imageInfo.Image.Ops[^1].OpType is not OpType.Ret and not OpType.End)
             Thrower.Throw(new InvalidOperationException());
     }
 
@@ -78,38 +53,38 @@ public class VlFunction
         switch (op.OpType)
         {
             case OpType.Init:
-                _asm.push(rsi);
-                _asm.push(rdi);
+                module.Assembler.push(rsi);
+                module.Assembler.push(rdi);
 
-                _asm.push(r15);
-                _asm.push(r14);
+                module.Assembler.push(r15);
+                module.Assembler.push(r14);
 
-                _asm.mov(r14, 0);
-                _asm.mov(rcx, 2048);
-                _asm.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
-                _asm.mov(r15, rax);
+                module.Assembler.mov(r14, 0);
+                module.Assembler.mov(rcx, 2048);
+                module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
+                module.Assembler.mov(r15, rax);
 
                 break;
             case OpType.End:
-                _sm.Pop(rax);
+                module.StackManager.Pop(rax);
 
-                _asm.push(rax);
-                _asm.push(rax);
-                _asm.mov(rcx, r15);
-                _asm.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Free)));
-                _asm.pop(rax);
-                _asm.pop(rax);
+                module.Assembler.push(rax);
+                module.Assembler.push(rax);
+                module.Assembler.mov(rcx, r15);
+                module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Free)));
+                module.Assembler.pop(rax);
+                module.Assembler.pop(rax);
 
-                _asm.pop(r14);
-                _asm.pop(r15);
+                module.Assembler.pop(r14);
+                module.Assembler.pop(r15);
 
-                _asm.pop(rdi);
-                _asm.pop(rsi);
+                module.Assembler.pop(rdi);
+                module.Assembler.pop(rsi);
 
-                _asm.mov(rsp, rbp);
-                _asm.pop(rbp);
+                module.Assembler.mov(rsp, rbp);
+                module.Assembler.pop(rbp);
 
-                _asm.ret();
+                module.Assembler.ret();
                 break;
             case OpType.Push:
                 if (op.Params?[0] is long)
@@ -117,41 +92,42 @@ public class VlFunction
                 else PushConst(op.Arg<double>(0));
                 break;
             case OpType.Drop:
-                _sm.Drop();
+                module.StackManager.Drop();
                 break;
             case OpType.Store64:
-                _sm.PopRegs(r10, rax); // reference, value
-                _asm.mov(__[r10], rax); // *(&variable) = value
+                module.StackManager.PopRegs(r10, rax); // reference, value
+                module.Assembler.mov(__[r10], rax); // *(&variable) = value
                 break;
             case OpType.Store32:
-                _sm.PopRegs(r10, rax); // reference, value
-                _asm.mov(__[r10], eax); // *(&variable) = value
+                module.StackManager.PopRegs(r10, rax); // reference, value
+                module.Assembler.mov(__[r10], eax); // *(&variable) = value
                 break;
             case OpType.Store16:
-                _sm.PopRegs(r10, rax); // reference, value
-                _asm.mov(__[r10], ax); // *(&variable) = value
+                module.StackManager.PopRegs(r10, rax); // reference, value
+                module.Assembler.mov(__[r10], ax); // *(&variable) = value
                 break;
             case OpType.Store8:
-                _sm.PopRegs(r10, rax); // reference, value
-                _asm.mov(__[r10], al); // *(&variable) = value
+                module.StackManager.PopRegs(r10, rax); // reference, value
+                module.Assembler.mov(__[r10], al); // *(&variable) = value
                 break;
             case OpType.Load64:
-                MultitypeOp(() => _sm.Load64(AsmType.I64), () => _sm.Load64(AsmType.F64));
+                MultitypeOp(() => module.StackManager.Load64(AsmType.I64),
+                    () => module.StackManager.Load64(AsmType.F64));
                 break;
             case OpType.Load32:
-                MultitypeOp(_sm.LoadI32,
+                MultitypeOp(module.StackManager.LoadI32,
                     () => Thrower.Throw(
                         new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
                 break;
             case OpType.Load16:
-                MultitypeOp(_sm.LoadI16,
+                MultitypeOp(module.StackManager.LoadI16,
                     () => Thrower.Throw(
                         new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
                 break;
             case OpType.Load8:
-                MultitypeOp(_sm.LoadI8,
+                MultitypeOp(module.StackManager.LoadI8,
                     () => Thrower.Throw(
                         new InvalidOperationException("This operation cannot be applied to floating point value"))
                 );
@@ -167,23 +143,23 @@ public class VlFunction
                 _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), op.OpType.ToString()));
                 break;
             case OpType.Eq:
-                if (_sm.GetTypeInTop() == AsmType.I64)
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.EqI)));
-                else if (_sm.GetTypeInTop() == AsmType.F64)
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.EqF)));
                 else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Neq:
-                if (_sm.GetTypeInTop() == AsmType.I64)
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.NeqI)));
-                else if (_sm.GetTypeInTop() == AsmType.F64)
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.NeqF)));
                 else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Lt:
-                if (_sm.GetTypeInTop() == AsmType.I64)
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LtI)));
-                else if (_sm.GetTypeInTop() == AsmType.F64)
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
                     _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LtF)));
                 else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
@@ -194,7 +170,7 @@ public class VlFunction
             case OpType.Ge:
                 break;
             case OpType.Br:
-                _asm.jmp(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                module.Assembler.jmp(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.BrOne:
                 CmpAndJump(op, 1);
@@ -203,31 +179,32 @@ public class VlFunction
                 CmpAndJump(op, 0);
                 break;
             case OpType.Ret:
-                _asm.mov(rsp, rbp);
-                _asm.pop(rbp);
-                _asm.ret();
+                module.Assembler.mov(rsp, rbp);
+                module.Assembler.pop(rbp);
+                module.Assembler.ret();
                 break;
             case OpType.Add:
-                MultitypeOp(() => BinaryOperation(_asm.add), () => BinaryOperation(_asm.addsd));
+                MultitypeOp(() => BinaryOperation(module.Assembler.add), () => BinaryOperation(module.Assembler.addsd));
                 break;
             case OpType.Sub:
-                MultitypeOp(() => BinaryOperation(_asm.sub), () => BinaryOperation(_asm.subsd));
+                MultitypeOp(() => BinaryOperation(module.Assembler.sub), () => BinaryOperation(module.Assembler.subsd));
                 break;
             case OpType.Mul:
-                MultitypeOp(() => BinaryOperation(_asm.imul), () => BinaryOperation(_asm.mulsd));
+                MultitypeOp(() => BinaryOperation(module.Assembler.imul),
+                    () => BinaryOperation(module.Assembler.mulsd));
                 break;
             case OpType.Div:
                 MultitypeOp(() =>
                 {
-                    _asm.xor(rdx, rdx);
-                    BinaryOperation((_, b) => _asm.idiv(b));
-                }, () => BinaryOperation(_asm.divsd));
+                    module.Assembler.xor(rdx, rdx);
+                    BinaryOperation((_, b) => module.Assembler.idiv(b));
+                }, () => BinaryOperation(module.Assembler.divsd));
                 break;
             case OpType.Mod:
                 MultitypeOp(() =>
                     {
-                        _asm.xor(rdx, rdx);
-                        BinaryOperation((_, b) => _asm.idiv(b), rdx);
+                        module.Assembler.xor(rdx, rdx);
+                        BinaryOperation((_, b) => module.Assembler.idiv(b), rdx);
                     },
                     () => _callManager.Call(
                         ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.RemF64))
@@ -235,7 +212,7 @@ public class VlFunction
                 );
                 break;
             case OpType.SetLabel:
-                _asm.Label(ref _labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                module.Assembler.Label(ref _labelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.CallSharp:
                 var tuple = ReflectionManager.Get(
@@ -246,22 +223,22 @@ public class VlFunction
                 _callManager.Call(tuple);
                 break;
             case OpType.CallFunc:
-                _sm.SubTypes(op.Arg<int>(1));
+                var fName = op.Arg<string>(0);
+                var f = module.Images.First(x => x.Name == fName);
 
-                var label = _functionLabels.Find(x => x.Name == op.Arg<string>(0));
-                _asm.call(label);
-
-                _sm.AddTypes([op.Arg<AsmType>(2)]);
+                module.StackManager.SubTypes(f.ArgTypes.Length);
+                module.Assembler.call(module.FunctionsLabels[fName]);
+                module.StackManager.AddTypes([f.ReturnType]);
                 break;
             case OpType.CallAddress:
                 break;
             case OpType.LocAddress:
-                _asm.mov(rax, rbp);
-                _asm.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
-                _sm.PushAddress(rax, op.Arg<AsmType>(1));
+                module.Assembler.mov(rax, rbp);
+                module.Assembler.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
+                module.StackManager.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
             case OpType.Dup:
-                _sm.Dup();
+                module.StackManager.Dup();
                 break;
             case OpType.Prolog:
             case OpType.Epilogue:
@@ -274,41 +251,41 @@ public class VlFunction
     }
 
     private void PushConst<T>(T value) where T : struct =>
-        _sm.Push(__[_dataManager.DefineData(value)], value is int or long ? AsmType.I64 : AsmType.F64);
+        module.StackManager.Push(__[_dataManager.DefineData(value)], value is int or long ? AsmType.I64 : AsmType.F64);
 
     private void CmpAndJump(Op op, int cmpValue)
     {
-        _sm.Pop(rax);
-        _asm.cmp(rax, cmpValue);
-        _asm.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+        module.StackManager.Pop(rax);
+        module.Assembler.cmp(rax, cmpValue);
+        module.Assembler.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
 
     private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,
         AssemblerRegister64 outputReg = default)
     {
-        _sm.Pop(r10);
-        _sm.Pop(rax);
+        module.StackManager.Pop(r10);
+        module.StackManager.Pop(rax);
 
         act(rax, r10);
 
-        _sm.Push(outputReg == default ? rax : outputReg);
+        module.StackManager.Push(outputReg == default ? rax : outputReg);
     }
 
     private void BinaryOperation(Action<AssemblerRegisterXMM, AssemblerRegisterXMM> act)
     {
-        _sm.Pop(xmm1);
-        _sm.Pop(xmm0);
+        module.StackManager.Pop(xmm1);
+        module.StackManager.Pop(xmm0);
 
         act(xmm0, xmm1);
 
-        _sm.Push(xmm0);
+        module.StackManager.Push(xmm0);
     }
 
     private void MultitypeOp(Action i64, Action f64)
     {
-        if (_sm.GetTypeInTop() == AsmType.I64)
+        if (module.StackManager.GetTypeInTop() == AsmType.I64)
             i64();
-        else if (_sm.GetTypeInTop() == AsmType.F64)
+        else if (module.StackManager.GetTypeInTop() == AsmType.F64)
             f64();
         else Thrower.Throw(new InvalidOperationException("Invalid type"));
     }

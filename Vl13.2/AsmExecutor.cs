@@ -3,13 +3,13 @@
 using System.Runtime.InteropServices;
 using Iced.Intel;
 
-public static class AsmExecutor
+public static partial class AsmExecutor
 {
     private const uint PageExecuteReadwrite = 0x40;
     private const uint MemCommit = 0x1000;
 
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
 
     public static void PrintCode(Assembler asm, DebugData debugData)
     {
@@ -24,7 +24,7 @@ public static class AsmExecutor
         }
     }
 
-    public static nint MakeFunction(Assembler asm)
+    public static unsafe delegate*<T> MakeFunction<T>(Assembler asm)
     {
         const ulong rip = 0x10;
         var stream = new MemoryStream();
@@ -33,6 +33,6 @@ public static class AsmExecutor
         var ptr = VirtualAlloc(IntPtr.Zero, (uint)stream.Length, MemCommit, PageExecuteReadwrite);
         Marshal.Copy(stream.ToArray(), 0, ptr, (int)stream.Length);
 
-        return ptr;
+        return (delegate*<T>)ptr;
     }
 }

@@ -1,17 +1,17 @@
 ﻿namespace Vl13._2;
 
-public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
+public partial record VlImageInfo(string Name, AsmType[] ArgTypes, AsmType ReturnType)
 {
     public readonly VlImage Image = new();
 
-    public int GetStackSizeInBytes()
+    public int GetStackSizeInBytes(VlModule module)
     {
         var cur = 0;
         var max = 0;
 
         foreach (var op in Image.Ops)
         {
-            cur += op.StackOutput();
+            cur += op.StackOutput(module);
             max = Math.Max(max, cur);
         }
 
@@ -29,8 +29,8 @@ public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
     public static int RoundUpSize(int stackSize) =>
         stackSize % 16 == 0 ? stackSize : stackSize + 8;
 
-    public int GetTotalSize() =>
-        RoundUpSize(GetLocalSizeInBytes() + GetStackSizeInBytes());
+    public int GetTotalSize(VlModule module) =>
+        RoundUpSize(GetLocalSizeInBytes() + GetStackSizeInBytes(module));
 
     public static string GenerateLabelName(string name) =>
         $"{name}{Guid.NewGuid().ToString()}";
@@ -72,10 +72,7 @@ public partial record VlImageInfo
     public void Div() => Image.Emit(new Op(OpType.Div, null));
     public void Mod() => Image.Emit(new Op(OpType.Mod, null));
     public void SetLabel(string labelName) => Image.Emit(new Op(OpType.SetLabel, labelName));
-
-    public void CallFunc(string name, int argsCount, AsmType returnType) =>
-        Image.Emit(new Op(OpType.CallFunc, name, argsCount, returnType));
-
+    public void CallFunc(string name) => Image.Emit(new Op(OpType.CallFunc, name));
     public void CallAddress() => Image.Emit(new Op(OpType.CallAddress, null));
     public void Ret() => Image.Emit(new Op(OpType.Ret, null));
     public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));

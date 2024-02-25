@@ -2,13 +2,13 @@
 
 public static class OpTypeExtensions
 {
-    public static int StackOutput(this Op op)
+    public static int StackOutput(this Op op, VlModule module)
     {
         var type = op.OpType;
 
         if (type.IsPush()) return 1;
         if (type.IsDup()) return 1;
-        if (type == OpType.CallFunc) return 1 - op.Arg<int>(1);
+        if (type == OpType.CallFunc) return 1 - module.Images.First(x => x.Name == op.Arg<string>(0)).ArgTypes.Length;
         if (type == OpType.CallSharp) return 1 - op.Arg<Type[]>(2).Length;
         if (type.IsLoad()) return 1;
 

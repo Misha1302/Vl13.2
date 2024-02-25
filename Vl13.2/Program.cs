@@ -33,7 +33,7 @@ unsafe
         () =>
         {
             debugData = new DebugData();
-            nativeFunction = (delegate*<long>)AsmExecutor.MakeFunction(asm = translator.Translate(debugData));
+            nativeFunction = AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData));
         });
 
     AsmExecutor.PrintCode(asm, debugData);
@@ -60,21 +60,16 @@ long MeasureTime(Action method)
 
 VlTranslator CreateTranslator()
 {
-    var init = new AsmFunctionBuilder("init", []);
-    init.Init();
-    init.CallFunc("main", [], AsmType.F64);
-    init.End();
+    var moduleBuilder = new VlModuleBuilder();
 
-
-    var main = new AsmFunctionBuilder("main", []);
-    main.DeclareLocals(new LocalInfo(AsmType.F64, "i"));
+    var main = moduleBuilder.AddFunction("main", [], AsmType.I64, [new LocalInfo(AsmType.F64, "i")]);
     main.For(
         () => main.SetLocal("i", () => main.PushF(1)),
         () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(100)),
         () => main.SetLocal("i", () => main.Mul(() => main.GetLocal("i"), () => main.PushF(1.0111))),
         () =>
         {
-            main.CallFunc("square", [() => main.GetLocal("i")], AsmType.F64);
+            main.CallFunc("square", () => main.GetLocal("i"));
             main.WriteLine(typeof(double));
             main.Drop();
         }
@@ -82,13 +77,10 @@ VlTranslator CreateTranslator()
     main.Ret(() => main.GetLocal("i"));
 
 
-    var square = new AsmFunctionBuilder("square", [AsmType.F64]);
-    square.DeclareLocals(new LocalInfo(AsmType.F64, "a"));
-    square.SetLocal("a", null); // set arg
+    var square = moduleBuilder.AddFunction("square", [new LocalInfo(AsmType.F64, "a")], AsmType.F64, []);
     square.Ret(() => square.Mul(() => square.GetLocal("a"), () => square.GetLocal("a")));
 
 
-    var vlModule = new VlModule { ImageFactories = [init, main, square] };
-    var vlTranslator = new VlTranslator(vlModule);
+    var vlTranslator = new VlTranslator(moduleBuilder.ImageInfos);
     return vlTranslator;
 }
