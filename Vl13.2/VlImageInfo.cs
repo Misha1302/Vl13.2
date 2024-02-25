@@ -72,7 +72,10 @@ public partial record VlImageInfo
     public void Div() => Image.Emit(new Op(OpType.Div, null));
     public void Mod() => Image.Emit(new Op(OpType.Mod, null));
     public void SetLabel(string labelName) => Image.Emit(new Op(OpType.SetLabel, labelName));
-    public void CallFunc(string name, int argsCount, AsmType returnType) => Image.Emit(new Op(OpType.CallFunc, name, argsCount, returnType));
+
+    public void CallFunc(string name, int argsCount, AsmType returnType) =>
+        Image.Emit(new Op(OpType.CallFunc, name, argsCount, returnType));
+
     public void CallAddress() => Image.Emit(new Op(OpType.CallAddress, null));
     public void Ret() => Image.Emit(new Op(OpType.Ret, null));
     public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));

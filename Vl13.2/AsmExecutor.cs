@@ -16,7 +16,7 @@ public static class AsmExecutor
         for (var index = 0; index < asm.Instructions.Count; index++)
         {
             var i = asm.Instructions[index];
-            
+
             foreach (var op in debugData.Data[index])
                 Console.WriteLine($"\n>>>>>> {op}");
 

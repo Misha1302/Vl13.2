@@ -61,7 +61,7 @@ public enum OpType
     CallSharp,
     CallFunc,
     CallAddress,
-    
+
     // ------- others
     Prolog,
     Epilogue,

@@ -62,16 +62,12 @@ VlTranslator CreateTranslator()
 {
     var init = new AsmFunctionBuilder("init", []);
     init.Init();
-
     init.CallFunc("main", [], AsmType.F64);
-
     init.End();
 
 
     var main = new AsmFunctionBuilder("main", []);
-
     main.DeclareLocals(new LocalInfo(AsmType.F64, "i"));
-
     main.For(
         () => main.SetLocal("i", () => main.PushF(1)),
         () => main.LessThan(() => main.GetLocal("i"), () => main.PushF(100)),
@@ -83,7 +79,6 @@ VlTranslator CreateTranslator()
             main.Drop();
         }
     );
-
     main.Ret(() => main.GetLocal("i"));
 
 
@@ -91,10 +86,7 @@ VlTranslator CreateTranslator()
     square.DeclareLocals(new LocalInfo(AsmType.F64, "a"));
     square.SetLocal("a", null); // set arg
     square.Ret(() => square.Mul(() => square.GetLocal("a"), () => square.GetLocal("a")));
-    square.Ret(() => square.GetLocal("a"));
 
-
-    // не умеет смотреть ветвления?
 
     var vlModule = new VlModule { ImageFactories = [init, main, square] };
     var vlTranslator = new VlTranslator(vlModule);
