@@ -1,17 +1,21 @@
 ﻿namespace Vl13._2;
 
-public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes, AsmType ReturnType)
+public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes, AsmType ReturnType)
     : VlImageInfo(Name, ArgTypes, ReturnType)
 {
     private Dictionary<string, LocalInfo> _localsList = new();
+    private Dictionary<string, string> _localsStructures = new();
 
     public void Write(Type valueType) => CallSharp(typeof(Console), nameof(Console.Write), [valueType]);
 
     public void WriteLine(Type? valueType) =>
         CallSharp(typeof(Console), nameof(Console.WriteLine), valueType == null ? [] : [valueType]);
 
-    public void DeclareLocals(params LocalInfo[] localInfos) =>
+    public void DeclareLocals(IEnumerable<LocalInfo> localInfos, Dictionary<string, string> localsStructures)
+    {
         _localsList = localInfos.ToDictionary(x => x.Name, x => x);
+        _localsStructures = localsStructures;
+    }
 
     public void While(Action condition, Action body)
     {
@@ -46,8 +50,20 @@ public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes, AsmType Return
 
     public void GetLocal(string locName)
     {
-        LocAddress(locName, _localsList[locName].Type);
-        Load64();
+        if (_localsList.TryGetValue(locName, out var value))
+        {
+            LocAddress(locName, value.Type);
+            Load64();
+        }
+        else if (_localsStructures.TryGetValue(locName, out var type))
+        {
+            foreach (var pair in Module.Structures[type])
+                GetLocal($"{locName}_{pair.Key}");
+        }
+        else
+        {
+            Thrower.Throw(new InvalidOperationException("Invalid type"));
+        }
     }
 
     public void LessThan(Action a, Action b) => BinaryOp(a, b, Lt);
@@ -95,9 +111,34 @@ public record AsmFunctionBuilder(string Name, AsmType[] ArgTypes, AsmType Return
 
     public void CallFunc(string name, params Action[] args)
     {
-        foreach (var arg in args)
-            arg();
+        for (var index = args.Length - 1; index >= 0; index--) 
+            args[index]();
 
         base.CallFunc(name);
+    }
+
+    public void SetField(string structName, string fieldName, Action action)
+    {
+        SetLocal($"{structName}_{fieldName}", action);
+    }
+
+    public void IncField(string structName, string fieldName)
+    {
+        IncLoc($"{structName}_{fieldName}");
+    }
+
+    public void GetField(string structName, string fieldName)
+    {
+        GetLocal($"{structName}_{fieldName}");
+    }
+
+    public void FieldAddress(string structName, string fieldName)
+    {
+        LocAddress($"{structName}_{fieldName}");
+    }
+
+    private void LocAddress(string locName)
+    {
+        LocAddress(locName, _localsList[locName].Type);
     }
 }
