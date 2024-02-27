@@ -14,11 +14,13 @@ after main function executing, init function restore registers and returns to C#
 
 every function must return value to avoid the errors
 
+when you call sharp function, dont forgot for shadow space
+
 */
 
 
-// TODO: implement exceptions via long jumps
 // TODO: add conditions
+// TODO: implement exceptions via long jumps
 // TODO: implement all/most instructions
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
 
@@ -35,8 +37,9 @@ unsafe
         () =>
         {
             debugData = new DebugData();
-            nativeFunction =
-                AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData, new TranslateData(2048, true)));
+            nativeFunction = AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData,
+                new TranslateData(2048, true) // check stack overflow is very heavy, but very useful for debug
+            ));
         });
 
     AsmExecutor.PrintCode(asm, debugData);
@@ -85,7 +88,7 @@ VlTranslator CreateTranslator()
 
     main.For(
         () => main.SetLocal("i", () => main.PushI(1)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(100_000)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(100_000_000)),
         () => main.IncLoc("i"),
         () =>
         {
@@ -96,40 +99,41 @@ VlTranslator CreateTranslator()
             main.GetField("xyz", "y");
             main.GetField("xyz", "x");
 
-            main.Write(typeof(long));
-            main.Drop();
-
-            main.PushI(' ');
-            main.Write(typeof(char));
-            main.Drop();
-
-            main.Write(typeof(long));
-            main.Drop();
-
-            main.PushI(' ');
-            main.Write(typeof(char));
-            main.Drop();
-
-            main.WriteLine(typeof(long));
-            main.Drop();
+            PrintItems(main, 3);
         }
     );
     main.Ret(() => main.GetLocal("i"));
 
 
     var square = module.AddFunction("square", module, [new Mli("T_XYZ", "xyz", true)], AsmType.I64, []);
-    // square.SetField("xyz", "x", () => square.Mul(() => square.GetField("xyz", "x"), () => square.PushI(2)));
-    // square.SetField("xyz", "y", () => square.Mul(() => square.GetField("xyz", "y"), () => square.PushI(2)));
-    // square.SetField("xyz", "z", () => square.Mul(() => square.GetField("xyz", "z"), () => square.PushI(2)));
+    
     square.IncField("xyz", "x");
     square.IncField("xyz", "y");
     square.IncField("xyz", "z");
 
-    square.PushI(0);
     square.PushI(0);
     square.Ret();
 
 
     var vlTranslator = new VlTranslator(module.ImageInfos);
     return vlTranslator;
+}
+
+void PrintItems(AsmFunctionBuilder fb, int count)
+{
+    for (var i = 0; i < count; i++)
+    {
+        fb.Write(typeof(long));
+        fb.Drop();
+
+        if (i != count - 1)
+        {
+            fb.PushI(' ');
+            fb.Write(typeof(char));
+            fb.Drop();
+        }
+    }
+
+    fb.WriteLine(null);
+    fb.Drop();
 }

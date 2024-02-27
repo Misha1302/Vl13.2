@@ -22,7 +22,7 @@ public class VlTranslator(List<VlImageInfo> images)
             new StackManager(module, new StackPositioner(asm, r14, r15, translateData.StackMaxSizeIn64));
 
         foreach (var image in images)
-            new VlFunction(image, module).Translate();
+            module.Translate(image);
 
         return module.Assembler;
     }

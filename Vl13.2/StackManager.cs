@@ -9,7 +9,7 @@ public class StackManager(VlModule module, StackPositioner sp)
     public void AddTypes(AsmType[] asmTypes)
     {
         foreach (var type in asmTypes)
-            _types.Push(type);
+            Push(null, type);
     }
 
     public AsmType GetTypeInTop() =>
@@ -27,25 +27,22 @@ public class StackManager(VlModule module, StackPositioner sp)
 
     public void Push(AssemblerRegister64 reg)
     {
-        _types.Push(AsmType.I64);
-        sp.Next(reg);
+        Push(() => sp.Next(reg), AsmType.I64);
     }
 
     public void Push(AssemblerRegisterXMM reg)
     {
-        _types.Push(AsmType.F64);
-        sp.Next(reg);
+        Push(() => sp.Next(reg), AsmType.F64);
     }
 
     public void Drop()
     {
-        Pop(() => sp.Prev());
+        Pop(() => sp.Prev(), true);
     }
 
     public void Skip()
     {
-        _types.Push(AsmType.None);
-        sp.Next(null);
+        Push(() => sp.Next(null), AsmType.None);
     }
 
     public void PopRegs(params AssemblerRegister64[] regs) =>
@@ -53,43 +50,53 @@ public class StackManager(VlModule module, StackPositioner sp)
 
     public void Push(AssemblerMemoryOperand memOp, AsmType refType)
     {
-        module.Assembler.mov(rax, memOp);
-        sp.Next(rax);
-        _types.Push(refType);
+        Push(() =>
+        {
+            module.Assembler.mov(rax, memOp);
+            sp.Next(rax);
+        }, refType);
     }
 
     public void Load64(AsmType t)
     {
-        Pop(rax);
-        module.Assembler.mov(rax, __[rax]);
-        sp.Next(rax);
-        _types.Push(t);
+        Push(() =>
+        {
+            Pop(rax);
+            module.Assembler.mov(rax, __[rax]);
+            sp.Next(rax);
+        }, t);
     }
 
     public void LoadI32()
     {
-        Pop(rax);
-        module.Assembler.mov(eax, __[rax]);
-        sp.Next(() => module.Assembler.mov(sp.Peek(), eax));
-        _types.Push(AsmType.I64);
+        Push(() =>
+        {
+            Pop(rax);
+            module.Assembler.mov(eax, __[rax]);
+            sp.Next(() => module.Assembler.mov(sp.Peek(), eax));
+        }, AsmType.I64);
     }
 
     public void LoadI16()
     {
-        Pop(rax);
-        module.Assembler.mov(ax, __[rax]);
-        module.Assembler.and(rax, ushort.MaxValue); // zero extra bits
-        sp.Next(() => module.Assembler.mov(sp.Peek(), ax));
-        _types.Push(AsmType.I64);
+        Push(() =>
+        {
+            Pop(rax);
+            module.Assembler.mov(ax, __[rax]);
+            module.Assembler.and(rax, ushort.MaxValue); // zero extra bits
+            sp.Next(() => module.Assembler.mov(sp.Peek(), ax));
+        }, AsmType.I64);
     }
 
     public void LoadI8()
     {
-        Pop(rax);
-        module.Assembler.mov(al, __[rax]);
-        module.Assembler.and(rax, byte.MaxValue); // zero extra bits
-        sp.Next(() => module.Assembler.mov(sp.Peek(), al));
-        _types.Push(AsmType.I64);
+        Push(() =>
+        {
+            Pop(rax);
+            module.Assembler.mov(al, __[rax]);
+            module.Assembler.and(rax, byte.MaxValue); // zero extra bits
+            sp.Next(() => module.Assembler.mov(sp.Peek(), al));
+        }, AsmType.I64);
     }
 
 
@@ -98,8 +105,7 @@ public class StackManager(VlModule module, StackPositioner sp)
 
     public void PushAddress(AssemblerRegister64 reg, AsmType refType)
     {
-        _types.Push(refType);
-        sp.Next(reg);
+        Push(() => sp.Next(reg), refType);
     }
 
     public void SubTypes(int count)
@@ -114,27 +120,43 @@ public class StackManager(VlModule module, StackPositioner sp)
     }
 
 
-    private void Pop(Action? act)
+    private void Pop(Action? act, bool canBeNone = false)
+    {
+        if (!canBeNone && GetTypeInTop() == AsmType.None)
+            Thrower.Throw(new InvalidOperationException("Invalid type"));
+
+        act?.Invoke();
+        CheckStackOverflowIfNeed();
+        _types.Pop();
+    }
+
+    private void Push(Action? act, AsmType type)
     {
         act?.Invoke();
+        CheckStackOverflowIfNeed();
+        _types.Push(type);
+    }
+
+    private void CheckStackOverflowIfNeed()
+    {
+        if (!module.TranslateData.CheckStackOverflow)
+            return;
 
         /*
         if (ulong)index > (ulong)maxIndexValue then
             int3
         */
 
-        if (module.TranslateData.CheckStackOverflow)
-        {
-            var @else = module.Assembler.CreateLabel();
+        var @else = module.Assembler.CreateLabel();
 
-            module.Assembler.cmp(sp.Index, sp.MaxIndexValue);
-            module.Assembler.jbe(@else);
+        module.Assembler.cmp(sp.Index, sp.MaxIndexValue);
+        module.Assembler.jbe(@else);
 
-            module.Assembler.int3();
+        module.Assembler.sub(rsp, 32);
+        module.Assembler.mov(rcx, sp.Index);
+        module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.StackOverflow)));
+        module.Assembler.int3();
 
-            module.Assembler.Label(ref @else);
-        }
-
-        _types.Pop();
+        module.Assembler.Label(ref @else);
     }
 }

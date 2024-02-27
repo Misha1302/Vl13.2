@@ -21,6 +21,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
         EmitDebug(new Op(OpType.Function, imageInfo.Name));
         ValidateImage();
 
+        module.Assembler.nop();
         module.Assembler.Label(ref module.FunctionsLabels[imageInfo.Name]);
 
         Prolog();
@@ -62,7 +63,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.Assembler.push(r14);
 
                 module.Assembler.mov(r14, 0);
-                module.Assembler.mov(rcx, module.TranslateData.StackMaxSizeIn64);
+                module.Assembler.mov(rcx, module.TranslateData.StackMaxSizeIn64 * 8);
                 module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
                 module.Assembler.mov(r15, rax);
 

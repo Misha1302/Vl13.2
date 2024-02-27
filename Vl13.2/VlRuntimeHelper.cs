@@ -46,6 +46,9 @@ public static class VlRuntimeHelper
         return 1;
     }
 
+    public static void StackOverflow(long value) =>
+        Thrower.Throw(new StackOverflowException($"Index was {value}"));
+
     public static long I8ToI64(sbyte value) => value;
     public static long I16ToI64(short value) => value;
     public static long I32ToI64(int value) => value;
