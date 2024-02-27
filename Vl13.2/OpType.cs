@@ -21,6 +21,10 @@ public enum OpType
 
     LocAddress,
 
+    StoreDataToLabel,
+    LoadDataFromLabel,
+    CreateDataLabel,
+
     // ------- conv
     I8ToI64,
     I16ToI64,

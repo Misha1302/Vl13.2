@@ -18,6 +18,7 @@ public class VlTranslator(List<VlImageInfo> images)
             ),
             TranslateData = translateData
         };
+        module.LabelsManager = new LabelsManager(module);
         module.StackManager =
             new StackManager(module, new StackPositioner(asm, r14, r15, translateData.StackMaxSizeIn64));
 

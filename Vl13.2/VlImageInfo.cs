@@ -38,6 +38,12 @@ public partial record VlImageInfo(string Name, AsmType[] ArgTypes, AsmType Retur
 
 public partial record VlImageInfo
 {
+    public void StoreDataToLabel(string name) => Image.Emit(new Op(OpType.StoreDataToLabel, name));
+
+    public void LoadDataFromLabel(string name, AsmType type) =>
+        Image.Emit(new Op(OpType.LoadDataFromLabel, name, type));
+
+    public void CreateDataLabel(string name) => Image.Emit(new Op(OpType.CreateDataLabel, name));
     public void PushI(long i) => Image.Emit(new Op(OpType.Push, i));
     public void PushF(double i) => Image.Emit(new Op(OpType.Push, i));
     public void Drop() => Image.Emit(new Op(OpType.Drop, null));

@@ -45,18 +45,24 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     {
         value?.Invoke();
 
-        var loc = _localsList[locName];
-
-        if (loc.IsByRef && canSetByRef)
-        {
-            GetLocal(locName, false); // load pointer
-            Store64();
-        }
-        else
-        {
-            LocAddress(locName, loc.Type);
-            Store64();
-        }
+        OpLoc(
+            locName,
+            loc =>
+            {
+                if (loc.IsByRef && canSetByRef)
+                {
+                    GetLocal(locName, false); // load pointer
+                    Store64();
+                }
+                else
+                {
+                    LocAddress(locName, loc.Type);
+                    Store64();
+                }
+            },
+            fieldName => SetLocal($"{locName}_{fieldName}", null),
+            true
+        );
     }
 
     public void GetLocal(string locName, bool canGetByRef = true)
@@ -75,7 +81,8 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     Load64();
                 }
             },
-            name => GetLocal($"{locName}_{name}")
+            name => GetLocal($"{locName}_{name}"),
+            false
         );
     }
 
@@ -152,17 +159,43 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void LocAddress(string locName)
     {
-        OpLoc(locName, info => LocAddress(locName, info.Type), fldName => FieldAddress(locName, fldName));
+        OpLoc(
+            locName,
+            info => LocAddress(locName, info.Type),
+            fldName => FieldAddress(locName, fldName),
+            false
+        );
     }
 
     private void OpLoc(
         string locName,
         Action<LocalInfo> loc,
-        Action<string> structure
+        Action<string> structure,
+        bool reverse
     )
     {
         if (!_localsStructures.TryGetValue(locName, out var type))
             loc(_localsList[locName]);
+        else if (reverse)
+            foreach (var pair in Module.Structures[type].Reverse())
+                structure(pair.Key);
+        else
+            foreach (var pair in Module.Structures[type])
+                structure(pair.Key);
+    }
+
+    private void OpGlobal(
+        string locName,
+        Action<LocalInfo> global,
+        Action<string> structure,
+        bool reverse
+    )
+    {
+        if (!Module.GlobalsOfStructureTypes.TryGetValue(locName, out var type))
+            global(Module.Globals[locName]);
+        else if (reverse)
+            foreach (var pair in Module.Structures[type].Reverse())
+                structure(pair.Key);
         else
             foreach (var pair in Module.Structures[type])
                 structure(pair.Key);
@@ -182,5 +215,25 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         SetLabel(elseLbl);
         elseBlock();
         SetLabel(endLbl);
+    }
+
+    public void LoadDataFromLabel(string name)
+    {
+        OpGlobal(
+            name,
+            _ => LoadDataFromLabel(name, Module.Globals[name].Type),
+            field => LoadDataFromLabel($"{name}_{field}"),
+            false
+        );
+    }
+
+    public new void StoreDataToLabel(string name)
+    {
+        OpGlobal(
+            name,
+            _ => base.StoreDataToLabel(name),
+            field => base.StoreDataToLabel($"{name}_{field}"),
+            true
+        );
     }
 }

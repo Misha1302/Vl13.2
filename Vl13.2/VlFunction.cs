@@ -8,18 +8,17 @@ using Iced.Intel;
 public class VlFunction(VlImageInfo imageInfo, VlModule module)
 {
     private readonly DataManager _dataManager = new(module);
-    private readonly LabelsManager _labelsManager = new(module.Assembler);
     private readonly CallManager _callManager = new(module.Assembler, module.StackManager);
     private readonly LocalsManager _localsManager = new();
+    public string Name => imageInfo.Name;
 
     public void Translate()
     {
         module.StackManager.ResetTypes();
         module.StackManager.AddTypes(imageInfo.ArgTypes);
-        _labelsManager.GetOrAddLabel("return_label");
+        module.LabelsManager.GetOrAddLabel("return_label");
 
         EmitDebug(new Op(OpType.Function, imageInfo.Name));
-        ValidateImage();
 
         module.CurrentFunction.SetLabel(module.FunctionsLabels[imageInfo.Name]);
 
@@ -42,18 +41,23 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
         module.DebugData.Emit(op, module.Assembler.Instructions.Count);
     }
 
-    private void ValidateImage()
-    {
-        if (imageInfo.Image.Ops[^1].OpType is not OpType.Ret and not OpType.End)
-            Thrower.Throw(new InvalidOperationException());
-    }
-
     private void EmitOp(Op op)
     {
         EmitDebug(op);
 
         switch (op.OpType)
         {
+            case OpType.StoreDataToLabel:
+                module.StackManager.Pop(rax);
+                module.Assembler.mov(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))], rax);
+                break;
+            case OpType.LoadDataFromLabel:
+                module.StackManager.Push(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))], op.Arg<AsmType>(1));
+                break;
+            case OpType.CreateDataLabel:
+                module.Assembler.Label(ref module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                module.Assembler.dq(0);
+                break;
             case OpType.Init:
                 module.Assembler.push(rsi);
                 module.Assembler.push(rdi);
@@ -174,7 +178,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Ge:
                 break;
             case OpType.Br:
-                module.Assembler.jmp(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                module.Assembler.jmp(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.BrOne:
                 CmpAndJump(op, 1);
@@ -222,7 +226,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.Assembler.nop();
                 break;
             case OpType.SetLabel:
-                SetLabel(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                SetLabel(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.CallSharp:
                 var tuple = ReflectionManager.Get(
@@ -253,6 +257,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Prolog:
             case OpType.Epilogue:
             case OpType.Body:
+            case OpType.Function:
                 break;
             default:
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());
@@ -273,7 +278,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
     {
         module.StackManager.Pop(rax);
         module.Assembler.cmp(rax, cmpValue);
-        module.Assembler.je(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+        module.Assembler.je(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
     }
 
     private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,

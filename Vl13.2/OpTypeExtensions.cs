@@ -15,7 +15,7 @@ public static class OpTypeExtensions
         if (type.IsConv()) return 0;
         if (type.IsBranch()) return 0;
         if (type.IsSetLabel()) return 0;
-        if (type.IsInitOrEnd()) return 0;
+        if (type.IsInitOp()) return 0;
 
         if (type.IsMathOp()) return -1;
         if (type.IsCmp()) return -1;
@@ -25,16 +25,17 @@ public static class OpTypeExtensions
         return Thrower.Throw<int>(new ArgumentOutOfRangeException());
     }
 
-    public static bool IsInitOrEnd(this OpType v) => v is OpType.Init or OpType.End;
+    public static bool IsInitOp(this OpType v) => v is OpType.Init or OpType.End or OpType.CreateDataLabel;
     public static bool IsPush(this OpType v) => v is OpType.Push;
     public static bool IsDrop(this OpType v) => v is OpType.Drop;
     public static bool IsDup(this OpType v) => v is OpType.Dup;
 
     public static bool IsStore(this OpType v) =>
-        v is OpType.Store8 or OpType.Store16 or OpType.Store32 or OpType.Store64;
+        v is OpType.Store8 or OpType.Store16 or OpType.Store32 or OpType.Store64 or OpType.StoreDataToLabel;
 
     public static bool IsLoad(this OpType v) =>
-        v is OpType.Load8 or OpType.Load16 or OpType.Load32 or OpType.Load64 or OpType.Load64 or OpType.LocAddress;
+        v is OpType.Load8 or OpType.Load16 or OpType.Load32 or OpType.Load64 or OpType.Load64 or OpType.LocAddress
+            or OpType.LoadDataFromLabel;
 
     public static bool IsConv(this OpType v) =>
         v is OpType.I8ToI64 or OpType.I16ToI64 or OpType.I32ToI64

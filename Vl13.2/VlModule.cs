@@ -4,6 +4,7 @@ using Iced.Intel;
 
 public class VlModule
 {
+    public LabelsManager LabelsManager = null!;
     public Assembler Assembler = null!;
     public RefDictionary<string, Label> FunctionsLabels = null!;
     public StackManager StackManager = null!;
