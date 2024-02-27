@@ -167,4 +167,20 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
             foreach (var pair in Module.Structures[type])
                 structure(pair.Key);
     }
+
+    public void Condition(Action cond, Action ifBlock, Action elseBlock)
+    {
+        var endLbl = GenerateLabelName("endCond");
+        var elseLbl = GenerateLabelName("endCond");
+
+        cond();
+        BrZero(elseLbl);
+
+        ifBlock();
+        Br(endLbl);
+
+        SetLabel(elseLbl);
+        elseBlock();
+        SetLabel(endLbl);
+    }
 }

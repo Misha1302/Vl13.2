@@ -15,6 +15,9 @@ public class StackManager(VlModule module, StackPositioner sp)
     public AsmType GetTypeInTop() =>
         _types.Peek();
 
+    public int TypesCount() =>
+        _types.Count;
+
     public void Pop(AssemblerRegister64 reg)
     {
         Pop(() => module.Assembler.mov(reg, sp.Prev()));
@@ -157,6 +160,6 @@ public class StackManager(VlModule module, StackPositioner sp)
         module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.StackOverflow)));
         module.Assembler.int3();
 
-        module.Assembler.Label(ref @else);
+        module.CurrentFunction.SetLabel(@else);
     }
 }

@@ -68,5 +68,6 @@ public enum OpType
     Body,
     Init,
     End,
-    Function
+    Function,
+    Nop
 }

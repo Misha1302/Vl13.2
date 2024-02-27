@@ -10,9 +10,10 @@ public class VlModule
     public IDebugData DebugData = null!;
     public List<VlImageInfo> Images = null!;
     public TranslateData TranslateData = null!;
+    public VlFunction CurrentFunction = null!;
 
     public void Translate(VlImageInfo image)
     {
-        new VlFunction(image, this).Translate();
+        (CurrentFunction = new VlFunction(image, this)).Translate();
     }
 }

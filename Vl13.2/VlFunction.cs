@@ -7,7 +7,7 @@ using Iced.Intel;
 /// </summary>
 public class VlFunction(VlImageInfo imageInfo, VlModule module)
 {
-    private readonly DataManager _dataManager = new(module.Assembler);
+    private readonly DataManager _dataManager = new(module);
     private readonly LabelsManager _labelsManager = new(module.Assembler);
     private readonly CallManager _callManager = new(module.Assembler, module.StackManager);
     private readonly LocalsManager _localsManager = new();
@@ -21,8 +21,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
         EmitDebug(new Op(OpType.Function, imageInfo.Name));
         ValidateImage();
 
-        module.Assembler.nop();
-        module.Assembler.Label(ref module.FunctionsLabels[imageInfo.Name]);
+        module.CurrentFunction.SetLabel(module.FunctionsLabels[imageInfo.Name]);
 
         Prolog();
         foreach (var op in imageInfo.Image.Ops)
@@ -63,8 +62,10 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.Assembler.push(r14);
 
                 module.Assembler.mov(r14, 0);
+
                 module.Assembler.mov(rcx, module.TranslateData.StackMaxSizeIn64 * 8);
-                module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
+                module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper),
+                    nameof(VlRuntimeHelper.Alloc)));
                 module.Assembler.mov(r15, rax);
 
                 break;
@@ -182,6 +183,9 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 CmpAndJump(op, 0);
                 break;
             case OpType.Ret:
+                if (module.StackManager.TypesCount() == 0)
+                    Thrower.Throw(new InvalidOperationException("No value to return"));
+
                 module.Assembler.mov(rsp, rbp);
                 module.Assembler.pop(rbp);
                 module.Assembler.ret();
@@ -214,8 +218,11 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                     )
                 );
                 break;
+            case OpType.Nop:
+                module.Assembler.nop();
+                break;
             case OpType.SetLabel:
-                module.Assembler.Label(ref _labelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                SetLabel(_labelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.CallSharp:
                 var tuple = ReflectionManager.Get(
@@ -251,6 +258,12 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());
                 break;
         }
+    }
+
+    public void SetLabel(Label label)
+    {
+        module.Assembler.Label(ref label);
+        module.Assembler.nop();
     }
 
     private void PushConst<T>(T value) where T : struct =>

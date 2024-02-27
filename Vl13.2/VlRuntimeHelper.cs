@@ -1,6 +1,5 @@
 ﻿namespace Vl13._2;
 
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Math = Math;
 
@@ -28,16 +27,11 @@ public static class VlRuntimeHelper
         for (var i = 0; i < bytes; i++)
             Marshal.WriteByte(ptr, i, 0);
 
-        Console.WriteLine(ptr);
         return ptr;
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Free(long ptr)
-    {
-        Console.WriteLine(ptr);
+    public static void Free(long ptr) =>
         Marshal.FreeCoTaskMem((nint)ptr);
-    }
 
     public static int WriteNumbers(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10,
         int a11)
@@ -48,6 +42,9 @@ public static class VlRuntimeHelper
 
     public static void StackOverflow(long value) =>
         Thrower.Throw(new StackOverflowException($"Index was {value}"));
+
+    public static long RndInt(long a, long b) =>
+        Random.Shared.NextInt64(a, b);
 
     public static long I8ToI64(sbyte value) => value;
     public static long I16ToI64(short value) => value;

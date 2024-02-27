@@ -31,15 +31,16 @@ unsafe
     delegate*<long> nativeFunction = null;
     long value = 0;
     Assembler asm = null!;
-    DebugData debugData = null!;
+
+    var debugData = new DebugData();
 
     var compilationTime = MeasureTime(
         () =>
         {
-            debugData = new DebugData();
-            nativeFunction = AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData,
-                new TranslateData(2048, true) // check stack overflow is very heavy, but very useful for debug
-            ));
+            nativeFunction = AsmExecutor.MakeFunction<long>(
+                // check stack overflow is very heavy, but very useful for debug
+                asm = translator.Translate(debugData, new TranslateData(2048, true))
+            );
         });
 
     AsmExecutor.PrintCode(asm, debugData);
@@ -68,72 +69,43 @@ VlTranslator CreateTranslator()
 {
     var module = new VlModuleBuilder();
 
-    module.AddStructure("T_XYZ", new Dictionary<string, AsmType>
-    {
-        { "x", AsmType.I64 },
-        { "y", AsmType.I64 },
-        { "z", AsmType.I64 }
-    });
+    var main = module.AddFunction("main", module, [], AsmType.I64, [
+        new Mli("I64", "i", false), new Mli("I64", "sum", false)
+    ]);
 
-    var main = module.AddFunction("main", module, [], AsmType.I64,
-        [
-            new Mli("I64", "i", false),
-            new Mli("T_XYZ", "xyz", false)
-        ]
-    );
-
-    main.SetField("xyz", "x", () => main.PushI(1));
-    main.SetField("xyz", "y", () => main.PushI(2));
-    main.SetField("xyz", "z", () => main.PushI(3));
+    main.SetLocal("sum", () => main.PushI(0));
 
     main.For(
-        () => main.SetLocal("i", () => main.PushI(1)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(100_000_000)),
+        () => main.SetLocal("i", () => main.PushI(0)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(30_000_000)),
         () => main.IncLoc("i"),
         () =>
         {
-            main.CallFunc("square", () => main.LocAddress("xyz"));
-            main.Drop();
-
-            main.GetField("xyz", "z");
-            main.GetField("xyz", "y");
-            main.GetField("xyz", "x");
-
-            PrintItems(main, 3);
+            main.SetLocal("sum", () => main.Add(() => main.GetLocal("sum"), () =>
+            {
+                main.PushI(0);
+                main.PushI(10_000);
+                main.Condition
+                (
+                    () => main.LessThan(
+                        () => main.CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.RndInt),
+                            [typeof(long), typeof(long)]),
+                        () => main.PushI(5000)
+                    ),
+                    () => main.PushI(-1),
+                    () => main.PushI(1)
+                );
+            }));
         }
     );
-    main.Ret(() => main.GetLocal("i"));
 
+    main.GetLocal("sum");
+    main.WriteLine(typeof(long));
+    main.Drop();
 
-    var square = module.AddFunction("square", module, [new Mli("T_XYZ", "xyz", true)], AsmType.I64, []);
-    
-    square.IncField("xyz", "x");
-    square.IncField("xyz", "y");
-    square.IncField("xyz", "z");
-
-    square.PushI(0);
-    square.Ret();
+    main.Ret(() => main.PushI(0));
 
 
     var vlTranslator = new VlTranslator(module.ImageInfos);
     return vlTranslator;
-}
-
-void PrintItems(AsmFunctionBuilder fb, int count)
-{
-    for (var i = 0; i < count; i++)
-    {
-        fb.Write(typeof(long));
-        fb.Drop();
-
-        if (i != count - 1)
-        {
-            fb.PushI(' ');
-            fb.Write(typeof(char));
-            fb.Drop();
-        }
-    }
-
-    fb.WriteLine(null);
-    fb.Drop();
 }
