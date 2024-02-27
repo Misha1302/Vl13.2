@@ -18,8 +18,6 @@ when you call sharp function, dont forgot for shadow space
 
 */
 
-
-// TODO: add conditions
 // TODO: implement exceptions via long jumps
 // TODO: implement all/most instructions
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
