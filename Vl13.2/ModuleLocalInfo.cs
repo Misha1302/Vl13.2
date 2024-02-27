@@ -2,4 +2,4 @@
 
 namespace Vl13._2;
 
-public record ModuleLocalInfo(string Type, string Name);
+public record ModuleLocalInfo(string Type, string Name, bool IsByRef);

@@ -12,16 +12,24 @@ init function also saves registers
 init function calls main function, that user written
 after main function executing, init function restore registers and returns to C# method, that calls it
 
+every function must return value to avoid the errors
+
 */
 
 
-// TODO: add structures
-// TODO: implement all/most instructions?
-// TODO: implement exceptions via long jumps?
+// TODO: implement exceptions via long jumps
+// TODO: add conditions
+// TODO: implement all/most instructions
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
 
 unsafe
 {
+    Task.Run(() =>
+    {
+        // Thread.Sleep(1000);
+        // Process.GetCurrentProcess().Kill();
+    });
+
     var translator = CreateTranslator();
 
     delegate*<long> nativeFunction = null;
@@ -33,7 +41,8 @@ unsafe
         () =>
         {
             debugData = new DebugData();
-            nativeFunction = AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData));
+            nativeFunction =
+                AsmExecutor.MakeFunction<long>(asm = translator.Translate(debugData, new TranslateData(2048, true)));
         });
 
     AsmExecutor.PrintCode(asm, debugData);
@@ -71,26 +80,23 @@ VlTranslator CreateTranslator()
 
     var main = module.AddFunction("main", module, [], AsmType.I64,
         [
-            new Mli("I64", "i"),
-            new Mli("T_XYZ", "xyz")
+            new Mli("I64", "i", false),
+            new Mli("T_XYZ", "xyz", false)
         ]
     );
 
-    main.SetField("xyz", "x", () => main.PushI(0));
-    main.SetField("xyz", "y", () => main.PushI(1));
-    main.SetField("xyz", "z", () => main.PushI(2));
+    main.SetField("xyz", "x", () => main.PushI(1));
+    main.SetField("xyz", "y", () => main.PushI(2));
+    main.SetField("xyz", "z", () => main.PushI(3));
 
     main.For(
         () => main.SetLocal("i", () => main.PushI(1)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(100)),
+        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(100_000)),
         () => main.IncLoc("i"),
         () =>
         {
-            main.IncField("xyz", "x");
-            main.IncField("xyz", "y");
-            main.IncField("xyz", "z");
-
-            main.CallFunc("square", () => main.GetLocal("xyz"), () => main.FieldAddress("xyz", "x"));
+            main.CallFunc("square", () => main.LocAddress("xyz"));
+            main.Drop();
 
             main.GetField("xyz", "z");
             main.GetField("xyz", "y");
@@ -98,14 +104,18 @@ VlTranslator CreateTranslator()
 
             main.Write(typeof(long));
             main.Drop();
+
             main.PushI(' ');
             main.Write(typeof(char));
             main.Drop();
+
             main.Write(typeof(long));
             main.Drop();
+
             main.PushI(' ');
             main.Write(typeof(char));
             main.Drop();
+
             main.WriteLine(typeof(long));
             main.Drop();
         }
@@ -113,16 +123,15 @@ VlTranslator CreateTranslator()
     main.Ret(() => main.GetLocal("i"));
 
 
-    var square = module.AddFunction("square", module, [new Mli("T_XYZ", "xyz"), new Mli("I64", "pointer")], AsmType.F64,
-        []);
-    square.Mul(() => square.GetField("xyz", "x"), () => square.Dup());
-    square.Mul(() => square.GetField("xyz", "y"), () => square.Dup());
-    square.Mul(() => square.GetField("xyz", "z"), () => square.Dup());
+    var square = module.AddFunction("square", module, [new Mli("T_XYZ", "xyz", true)], AsmType.I64, []);
+    // square.SetField("xyz", "x", () => square.Mul(() => square.GetField("xyz", "x"), () => square.PushI(2)));
+    // square.SetField("xyz", "y", () => square.Mul(() => square.GetField("xyz", "y"), () => square.PushI(2)));
+    // square.SetField("xyz", "z", () => square.Mul(() => square.GetField("xyz", "z"), () => square.PushI(2)));
+    square.IncField("xyz", "x");
+    square.IncField("xyz", "y");
+    square.IncField("xyz", "z");
 
-    square.PushI(55);
-    square.GetLocal("pointer");
-    square.Store64();
-
+    square.PushI(0);
     square.Ret();
 
 

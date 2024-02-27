@@ -14,9 +14,11 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
 
     public void Translate()
     {
+        module.StackManager.ResetTypes();
         module.StackManager.AddTypes(imageInfo.ArgTypes);
         _labelsManager.GetOrAddLabel("return_label");
 
+        EmitDebug(new Op(OpType.Function, imageInfo.Name));
         ValidateImage();
 
         module.Assembler.Label(ref module.FunctionsLabels[imageInfo.Name]);
@@ -60,7 +62,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.Assembler.push(r14);
 
                 module.Assembler.mov(r14, 0);
-                module.Assembler.mov(rcx, 2048);
+                module.Assembler.mov(rcx, module.TranslateData.StackMaxSizeIn64);
                 module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Alloc)));
                 module.Assembler.mov(r15, rax);
 

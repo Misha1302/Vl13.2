@@ -41,29 +41,42 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         Ret();
     }
 
-    public void SetLocal(string locName, Action? value)
+    public void SetLocal(string locName, Action? value, bool canSetByRef = true)
     {
         value?.Invoke();
-        LocAddress(locName, _localsList[locName].Type);
-        Store64();
-    }
 
-    public void GetLocal(string locName)
-    {
-        if (_localsList.TryGetValue(locName, out var value))
+        var loc = _localsList[locName];
+
+        if (loc.IsByRef && canSetByRef)
         {
-            LocAddress(locName, value.Type);
-            Load64();
-        }
-        else if (_localsStructures.TryGetValue(locName, out var type))
-        {
-            foreach (var pair in Module.Structures[type])
-                GetLocal($"{locName}_{pair.Key}");
+            GetLocal(locName, false); // load pointer
+            Store64();
         }
         else
         {
-            Thrower.Throw(new InvalidOperationException("Invalid type"));
+            LocAddress(locName, loc.Type);
+            Store64();
         }
+    }
+
+    public void GetLocal(string locName, bool canGetByRef = true)
+    {
+        OpLoc(locName,
+            info =>
+            {
+                if (info.IsByRef && canGetByRef)
+                {
+                    GetLocal(locName, false);
+                    Load64();
+                }
+                else
+                {
+                    LocAddress(locName, info.Type);
+                    Load64();
+                }
+            },
+            name => GetLocal($"{locName}_{name}")
+        );
     }
 
     public void LessThan(Action a, Action b) => BinaryOp(a, b, Lt);
@@ -111,7 +124,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void CallFunc(string name, params Action[] args)
     {
-        for (var index = args.Length - 1; index >= 0; index--) 
+        for (var index = args.Length - 1; index >= 0; index--)
             args[index]();
 
         base.CallFunc(name);
@@ -137,8 +150,21 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         LocAddress($"{structName}_{fieldName}");
     }
 
-    private void LocAddress(string locName)
+    public void LocAddress(string locName)
     {
-        LocAddress(locName, _localsList[locName].Type);
+        OpLoc(locName, info => LocAddress(locName, info.Type), fldName => FieldAddress(locName, fldName));
+    }
+
+    private void OpLoc(
+        string locName,
+        Action<LocalInfo> loc,
+        Action<string> structure
+    )
+    {
+        if (!_localsStructures.TryGetValue(locName, out var type))
+            loc(_localsList[locName]);
+        else
+            foreach (var pair in Module.Structures[type])
+                structure(pair.Key);
     }
 }

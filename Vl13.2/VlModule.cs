@@ -4,9 +4,10 @@ using Iced.Intel;
 
 public class VlModule
 {
-    public required Assembler Assembler;
-    public required RefDictionary<string, Label> FunctionsLabels;
-    public required StackManager StackManager;
-    public required IDebugData DebugData;
-    public required List<VlImageInfo> Images;
+    public Assembler Assembler = null!;
+    public RefDictionary<string, Label> FunctionsLabels = null!;
+    public StackManager StackManager = null!;
+    public IDebugData DebugData = null!;
+    public List<VlImageInfo> Images = null!;
+    public TranslateData TranslateData = null!;
 }

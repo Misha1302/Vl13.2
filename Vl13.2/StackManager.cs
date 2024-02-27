@@ -2,14 +2,14 @@
 
 using Iced.Intel;
 
-public class StackManager(Assembler asm, StackPositioner sp)
+public class StackManager(VlModule module, StackPositioner sp)
 {
     private readonly Stack<AsmType> _types = new();
 
     public void AddTypes(AsmType[] asmTypes)
     {
-        foreach (var asmType in asmTypes)
-            _types.Push(asmType);
+        foreach (var type in asmTypes)
+            _types.Push(type);
     }
 
     public AsmType GetTypeInTop() =>
@@ -17,14 +17,12 @@ public class StackManager(Assembler asm, StackPositioner sp)
 
     public void Pop(AssemblerRegister64 reg)
     {
-        asm.mov(reg, sp.Prev());
-        _types.Pop();
+        Pop(() => module.Assembler.mov(reg, sp.Prev()));
     }
 
     public void Pop(AssemblerRegisterXMM reg)
     {
-        asm.movq(reg, sp.Prev());
-        _types.Pop();
+        Pop(() => module.Assembler.movq(reg, sp.Prev()));
     }
 
     public void Push(AssemblerRegister64 reg)
@@ -41,8 +39,7 @@ public class StackManager(Assembler asm, StackPositioner sp)
 
     public void Drop()
     {
-        sp.Prev();
-        _types.Pop();
+        Pop(() => sp.Prev());
     }
 
     public void Skip()
@@ -56,7 +53,7 @@ public class StackManager(Assembler asm, StackPositioner sp)
 
     public void Push(AssemblerMemoryOperand memOp, AsmType refType)
     {
-        asm.mov(rax, memOp);
+        module.Assembler.mov(rax, memOp);
         sp.Next(rax);
         _types.Push(refType);
     }
@@ -64,7 +61,7 @@ public class StackManager(Assembler asm, StackPositioner sp)
     public void Load64(AsmType t)
     {
         Pop(rax);
-        asm.mov(rax, __[rax]);
+        module.Assembler.mov(rax, __[rax]);
         sp.Next(rax);
         _types.Push(t);
     }
@@ -72,26 +69,26 @@ public class StackManager(Assembler asm, StackPositioner sp)
     public void LoadI32()
     {
         Pop(rax);
-        asm.mov(eax, __[rax]);
-        sp.Next(() => asm.mov(sp.Peek(), eax));
+        module.Assembler.mov(eax, __[rax]);
+        sp.Next(() => module.Assembler.mov(sp.Peek(), eax));
         _types.Push(AsmType.I64);
     }
 
     public void LoadI16()
     {
         Pop(rax);
-        asm.mov(ax, __[rax]);
-        asm.and(rax, ushort.MaxValue); // zero extra bits
-        sp.Next(() => asm.mov(sp.Peek(), ax));
+        module.Assembler.mov(ax, __[rax]);
+        module.Assembler.and(rax, ushort.MaxValue); // zero extra bits
+        sp.Next(() => module.Assembler.mov(sp.Peek(), ax));
         _types.Push(AsmType.I64);
     }
 
     public void LoadI8()
     {
         Pop(rax);
-        asm.mov(al, __[rax]);
-        asm.and(rax, byte.MaxValue); // zero extra bits
-        sp.Next(() => asm.mov(sp.Peek(), al));
+        module.Assembler.mov(al, __[rax]);
+        module.Assembler.and(rax, byte.MaxValue); // zero extra bits
+        sp.Next(() => module.Assembler.mov(sp.Peek(), al));
         _types.Push(AsmType.I64);
     }
 
@@ -108,6 +105,36 @@ public class StackManager(Assembler asm, StackPositioner sp)
     public void SubTypes(int count)
     {
         for (var i = 0; i < count; i++)
-            _types.Pop();
+            Pop(null);
+    }
+
+    public void ResetTypes()
+    {
+        _types.Clear();
+    }
+
+
+    private void Pop(Action? act)
+    {
+        act?.Invoke();
+
+        /*
+        if (ulong)index > (ulong)maxIndexValue then
+            int3
+        */
+
+        if (module.TranslateData.CheckStackOverflow)
+        {
+            var @else = module.Assembler.CreateLabel();
+
+            module.Assembler.cmp(sp.Index, sp.MaxIndexValue);
+            module.Assembler.jbe(@else);
+
+            module.Assembler.int3();
+
+            module.Assembler.Label(ref @else);
+        }
+
+        _types.Pop();
     }
 }

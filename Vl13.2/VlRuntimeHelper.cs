@@ -28,12 +28,16 @@ public static class VlRuntimeHelper
         for (var i = 0; i < bytes; i++)
             Marshal.WriteByte(ptr, i, 0);
 
+        Console.WriteLine(ptr);
         return ptr;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Free(long ptr) =>
+    public static void Free(long ptr)
+    {
+        Console.WriteLine(ptr);
         Marshal.FreeCoTaskMem((nint)ptr);
+    }
 
     public static int WriteNumbers(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10,
         int a11)

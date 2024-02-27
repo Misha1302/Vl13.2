@@ -36,7 +36,7 @@ public class VlModuleBuilder
         func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
 
         foreach (var t in argsInfos)
-            func.SetLocal(t.Name, null);
+            func.SetLocal(t.Name, null, false);
 
         ImageInfos.Add(func);
         return func;
@@ -55,13 +55,11 @@ public class VlModuleBuilder
 
     private List<LocalInfo> ToLocals(Mli t, Dictionary<string, string> localsStructures)
     {
-        if (_structures.TryGetValue(t.Type, out var value))
-        {
-            localsStructures.Add(t.Name, t.Type);
-            return value.Select(x => new LocalInfo(x.Value, t.Name + "_" + x.Key)).ToList();
-        }
+        if (!_structures.TryGetValue(t.Type, out var value))
+            return [new LocalInfo(Enum.Parse<AsmType>(t.Type), t.Name, t.IsByRef)];
 
-        return [new LocalInfo(Enum.Parse<AsmType>(t.Type), t.Name)];
+        localsStructures.Add(t.Name, t.Type);
+        return value.Select(x => new LocalInfo(x.Value, t.Name + "_" + x.Key, t.IsByRef)).ToList();
     }
 
     public void AddStructure(string typeName, Dictionary<string, AsmType> structure)

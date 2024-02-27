@@ -2,20 +2,20 @@
 
 using Iced.Intel;
 
-public class StackPositioner(Assembler asm, AssemblerRegister64 index, AssemblerRegister64 pointer)
+public record StackPositioner(Assembler Asm, AssemblerRegister64 Index, AssemblerRegister64 Pointer, int MaxIndexValue)
 {
     private AssemblerMemoryOperand StackPos =>
-        __[pointer + index * 8];
+        __[Pointer + Index * 8];
 
     public void Next(AssemblerRegister64 reg) =>
-        Next(() => asm.mov(StackPos, reg));
+        Next(() => Asm.mov(StackPos, reg));
 
     public void Next(AssemblerRegisterXMM reg) =>
-        Next(() => asm.movq(StackPos, reg));
+        Next(() => Asm.movq(StackPos, reg));
 
     public AssemblerMemoryOperand Prev()
     {
-        asm.dec(index);
+        Asm.dec(Index);
         return StackPos;
     }
 
@@ -25,6 +25,6 @@ public class StackPositioner(Assembler asm, AssemblerRegister64 index, Assembler
     public void Next(Action? act)
     {
         act?.Invoke();
-        asm.inc(index);
+        Asm.inc(Index);
     }
 }

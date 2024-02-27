@@ -67,5 +67,6 @@ public enum OpType
     Epilogue,
     Body,
     Init,
-    End
+    End,
+    Function
 }
