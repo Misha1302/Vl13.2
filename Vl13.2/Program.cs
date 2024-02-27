@@ -24,12 +24,6 @@ every function must return value to avoid the errors
 
 unsafe
 {
-    Task.Run(() =>
-    {
-        // Thread.Sleep(1000);
-        // Process.GetCurrentProcess().Kill();
-    });
-
     var translator = CreateTranslator();
 
     delegate*<long> nativeFunction = null;
@@ -131,6 +125,7 @@ VlTranslator CreateTranslator()
     square.IncField("xyz", "y");
     square.IncField("xyz", "z");
 
+    square.PushI(0);
     square.PushI(0);
     square.Ret();
 
