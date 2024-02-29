@@ -236,4 +236,21 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
             true
         );
     }
+
+    public void CallAddress(string[] args, AsmType i64)
+    {
+        base.CallAddress(ToTypes(args), i64);
+    }
+
+    private AsmType[] ToTypes(string[] args)
+    {
+        var list = new List<AsmType>();
+
+        foreach (var arg in args)
+            if (!Module.Structures.TryGetValue(arg, out var value))
+                list.Add(Enum.Parse<AsmType>(arg));
+            else list.AddRange(value.Select(x => x.Value));
+
+        return list.ToArray();
+    }
 }

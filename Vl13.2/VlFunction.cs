@@ -20,7 +20,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
 
         EmitDebug(new Op(OpType.Function, imageInfo.Name));
 
-        module.CurrentFunction.SetLabel(module.FunctionsLabels[imageInfo.Name]);
+        module.CurrentFunction.SetLabel(module.LabelsManager.GetOrAddLabel(imageInfo.Name));
 
         Prolog();
         foreach (var op in imageInfo.Image.Ops)
@@ -236,15 +236,19 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 );
                 _callManager.Call(tuple);
                 break;
+            case OpType.CallAddress:
+                module.StackManager.SubTypes(op.Arg<AsmType[]>(0).Length);
+                module.StackManager.Pop(rax);
+                module.Assembler.call(rax);
+                module.StackManager.AddTypes([op.Arg<AsmType>(1)]);
+                break;
             case OpType.CallFunc:
                 var fName = op.Arg<string>(0);
                 var f = module.Images.First(x => x.Name == fName);
 
                 module.StackManager.SubTypes(f.ArgTypes.Length);
-                module.Assembler.call(module.FunctionsLabels[fName]);
+                module.Assembler.call(module.LabelsManager.GetOrAddLabel(fName));
                 module.StackManager.AddTypes([f.ReturnType]);
-                break;
-            case OpType.CallAddress:
                 break;
             case OpType.LocAddress:
                 module.Assembler.mov(rax, rbp);
@@ -258,6 +262,11 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Epilogue:
             case OpType.Body:
             case OpType.Function:
+                break;
+            case OpType.FuncAddress:
+                module.Assembler.lea(rax, __[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))]);
+
+                module.StackManager.Push(rax);
                 break;
             default:
                 Thrower.Throw<object>(new ArgumentOutOfRangeException());

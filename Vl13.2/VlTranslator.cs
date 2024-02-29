@@ -13,9 +13,6 @@ public class VlTranslator(List<VlImageInfo> images)
             Assembler = asm,
             DebugData = debugData,
             Images = images,
-            FunctionsLabels = new RefDictionary<string, Label>(
-                images.Select(x => new KeyValuePair<string, Label>(x.Name, asm.CreateLabel(x.Name)))
-            ),
             TranslateData = translateData
         };
         module.LabelsManager = new LabelsManager(module);

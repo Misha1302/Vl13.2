@@ -10,6 +10,7 @@ public static class OpTypeExtensions
         if (type.IsDup()) return 1;
         if (type == OpType.CallFunc) return 1 - module.Images.First(x => x.Name == op.Arg<string>(0)).ArgTypes.Length;
         if (type == OpType.CallSharp) return 1 - op.Arg<Type[]>(2).Length;
+        if (type == OpType.CallAddress) return 1 - op.Arg<AsmType[]>(0).Length;
         if (type.IsLoad()) return 1;
 
         if (type.IsConv()) return 0;
@@ -35,7 +36,7 @@ public static class OpTypeExtensions
 
     public static bool IsLoad(this OpType v) =>
         v is OpType.Load8 or OpType.Load16 or OpType.Load32 or OpType.Load64 or OpType.Load64 or OpType.LocAddress
-            or OpType.LoadDataFromLabel;
+            or OpType.LoadDataFromLabel or OpType.FuncAddress;
 
     public static bool IsConv(this OpType v) =>
         v is OpType.I8ToI64 or OpType.I16ToI64 or OpType.I32ToI64
@@ -52,5 +53,4 @@ public static class OpTypeExtensions
         v is OpType.Add or OpType.Sub or OpType.Mul or OpType.Div or OpType.Mod;
 
     public static bool IsSetLabel(this OpType v) => v is OpType.SetLabel;
-    public static bool IsCall(this OpType v) => v is OpType.CallAddress or OpType.CallFunc or OpType.CallSharp;
 }

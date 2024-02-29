@@ -67,34 +67,19 @@ VlTranslator CreateTranslator()
 {
     var module = new VlModuleBuilder([new Mli("I64", "globalVar", false)]);
 
-    var main = module.AddFunction("main", module, [], AsmType.I64, [
-        new Mli("I64", "i", false)
-    ]);
-
-    main.PushI(0);
-    main.StoreDataToLabel("globalVar");
+    var main = module.AddFunction("main", [], AsmType.I64, []);
     
-
-    main.For(
-        () => main.SetLocal("i", () => main.PushI(0)),
-        () => main.LessThan(() => main.GetLocal("i"), () => main.PushI(10)),
-        () => main.IncLoc("i"),
-        () =>
-        {
-            main.LoadDataFromLabel("globalVar");
-            main.WriteLine(typeof(long));
-            main.Drop();
-            
-            main.LoadDataFromLabel("globalVar");
-            main.PushI(1);
-            main.Add();
-            main.StoreDataToLabel("globalVar");
-        }
-    );
-
+    main.FuncAddress("hello");
+    main.CallAddress([], AsmType.I64);
+    main.WriteLine(typeof(long));
+    main.Drop();
+    
     main.Ret(() => main.PushI(0));
 
+    var hello = module.AddFunction("hello", [], AsmType.I64, []);
+    hello.Ret(() => hello.PushI(111));
 
-    var vlTranslator = new VlTranslator(module.ImageInfos);
+
+    var vlTranslator = new VlTranslator(module.Compile());
     return vlTranslator;
 }

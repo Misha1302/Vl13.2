@@ -2,42 +2,69 @@
 
 public class VlModuleBuilder
 {
-    public readonly List<VlImageInfo> ImageInfos = [];
+    private readonly List<VlImageInfo> _imageInfos = [];
     private readonly Dictionary<string, Dictionary<string, AsmType>> _structures = new();
     public readonly Dictionary<string, LocalInfo> Globals;
     public readonly Dictionary<string, string> GlobalsOfStructureTypes = new();
 
-
     public VlModuleBuilder(params Mli[] globals)
     {
-        var dictionary = new Dictionary<string, LocalInfo>();
-
-        foreach (var info in globals)
-        {
-            foreach (var loc in ToLocals(info, GlobalsOfStructureTypes))
-                dictionary.Add(info.Name, loc);
-        }
-
-        Globals = dictionary;
-        CreateInitFunction();
+        Globals = ToDict(globals);
+        CreateBuildinFunctions();
     }
 
     public IReadOnlyDictionary<string, Dictionary<string, AsmType>> Structures => _structures;
 
+    private Dictionary<string, LocalInfo> ToDict(Mli[] globals)
+    {
+        var dictionary = new Dictionary<string, LocalInfo>();
+
+        foreach (var info in globals)
+            foreach (var loc in ToLocals(info, GlobalsOfStructureTypes))
+                dictionary.Add(info.Name, loc);
+        return dictionary;
+    }
+
+    public List<VlImageInfo> Compile()
+    {
+        var index = _imageInfos.FindIndex(x => x.Name == "dataFunc");
+        if (index != -1) _imageInfos.RemoveAt(index);
+
+        var dataFunc = AddFunction("dataFunc", [], AsmType.None, []);
+        foreach (var global in Globals)
+            dataFunc.CreateDataLabel(global.Key);
+
+        return _imageInfos;
+    }
+
+    private void CreateBuildinFunctions()
+    {
+        CreateInitFunction();
+
+        // CreateSetCatchFunction();
+        // CreateThrowExceptionFunction();
+    }
+
+    private void CreateThrowExceptionFunction()
+    {
+        throw new NotImplementedException();
+    }
+
+    private void CreateSetCatchFunction()
+    {
+        throw new NotImplementedException();
+    }
+
     private void CreateInitFunction()
     {
-        var init = AddFunction("init", this, [], AsmType.None, []);
+        var init = AddFunction("init", [], AsmType.None, []);
         init.Init();
         init.CallFunc("main");
         init.End();
-
-        foreach (var global in Globals)
-            init.CreateDataLabel(global.Key);
     }
 
     public AsmFunctionBuilder AddFunction(
         string name,
-        VlModuleBuilder module,
         Mli[] args,
         AsmType returnType,
         Mli[] locals
@@ -46,13 +73,13 @@ public class VlModuleBuilder
         var argsInfos = ToInfos(args, out var localsStructures);
         var localsInfos = ToInfos(locals, out localsStructures);
 
-        var func = new AsmFunctionBuilder(name, module, argsInfos.Select(x => x.Type).ToArray(), returnType);
+        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray(), returnType);
         func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
 
         foreach (var t in argsInfos)
             func.SetLocal(t.Name, null, false);
 
-        ImageInfos.Add(func);
+        _imageInfos.Add(func);
         return func;
     }
 
