@@ -36,8 +36,7 @@ unsafe
         () =>
         {
             nativeFunction = AsmExecutor.MakeFunction<long>(
-                // check stack overflow is very heavy, but very useful for debug
-                asm = translator.Translate(debugData, new TranslateData(2048, false))
+                asm = translator.Translate(debugData, new TranslateData(2048, true))
             );
         });
 
