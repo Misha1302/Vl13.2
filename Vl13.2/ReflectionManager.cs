@@ -15,13 +15,16 @@ public static class ReflectionManager
 
     public static (MethodInfo mi, nint ptr) Get(Type type, string methodName, Type[]? parameters = null)
     {
+        parameters ??= [];
+
         if (_dict.TryGetValue(HashOfMethod(type, methodName, parameters), out var res))
             return res;
 
-        var mi = parameters == null
-            ? type.GetMethod(methodName)
-            : type.GetMethods().Where(x => x.Name == methodName)
-                .First(x => ParamsEq(x.GetParameters(), parameters));
+        var methodInfos = type.GetMethods().Where(x => x.Name == methodName).ToArray();
+
+        var mi = methodInfos.Length != 1
+            ? methodInfos.FirstOrDefault(x => ParamsEq(x.GetParameters(), parameters))
+            : methodInfos.First();
 
         if (mi == null)
             return Thrower.Throw<(MethodInfo mi, nint ptr)>(
@@ -34,14 +37,18 @@ public static class ReflectionManager
         return value;
     }
 
-    private static int HashOfMethod(Type type, string methodName, Type[]? parameters) =>
+    private static int HashOfMethod(Type type, string methodName, Type[] parameters) =>
         HashCode.Combine(type, methodName, parameters);
 
-    private static bool ParamsEq(IReadOnlyCollection<ParameterInfo> parametersInfos, IReadOnlyList<Type> parameters)
+    private static bool ParamsEq(IReadOnlyList<ParameterInfo> parameters1, IReadOnlyList<Type> parameters2)
     {
-        if (parametersInfos.Count != parameters.Count)
+        if (parameters1.Count != parameters2.Count)
             return false;
 
-        return !parametersInfos.Where((t, i) => t.ParameterType != parameters[i]).Any();
+        for (var i = 0; i < parameters1.Count; i++)
+            if (parameters1[i].ParameterType != parameters2[i])
+                return false;
+
+        return true;
     }
 }

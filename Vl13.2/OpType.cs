@@ -50,6 +50,9 @@ public enum OpType
     Br,
     BrOne,
     BrZero,
+
+    JumpToAddress,
+
     Ret,
 
     // ------- math ops

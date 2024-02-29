@@ -255,6 +255,13 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.Assembler.sub(rax, _localsManager.GetOrAddLocal(op.Arg<string>(0)));
                 module.StackManager.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
+            case OpType.JumpToAddress:
+                module.Assembler.mov(rsp, rbp);
+                module.Assembler.pop(rbp);
+                
+                module.StackManager.Pop(rax);
+                module.Assembler.jmp(rax);
+                break;
             case OpType.Dup:
                 module.StackManager.Dup();
                 break;

@@ -5,6 +5,8 @@ using Math = Math;
 
 public static class VlRuntimeHelper
 {
+    private static readonly Stack<long> _stack = new();
+
     public static double RemF64(double a, double b) =>
         (Math.Abs(a) - Math.Abs(b) * Math.Floor(Math.Abs(a) / Math.Abs(b))) * Math.Sign(a);
 
@@ -54,4 +56,7 @@ public static class VlRuntimeHelper
     public static int I64ToI32(long value) => (int)value;
     public static double I64ToF64(long value) => value;
     public static long F64ToI64(double value) => (long)(value + 0.0001);
+
+    public static void PushAddress(long address) => _stack.Push(address);
+    public static long PopAddress() => _stack.Pop();
 }

@@ -43,6 +43,7 @@ public partial record VlImageInfo
     public void LoadDataFromLabel(string name, AsmType type) =>
         Image.Emit(new Op(OpType.LoadDataFromLabel, name, type));
 
+    public void JumpToAddress() => Image.Emit(new Op(OpType.JumpToAddress));
     public void FuncAddress(string name) => Image.Emit(new Op(OpType.FuncAddress, name));
     public void CreateDataLabel(string name) => Image.Emit(new Op(OpType.CreateDataLabel, name));
     public void PushI(long i) => Image.Emit(new Op(OpType.Push, i));
@@ -87,7 +88,7 @@ public partial record VlImageInfo
     public void End() => Image.Emit(new Op(OpType.End, null));
 
     public void CallSharp(Type t, string name, Type[]? parameters = null) =>
-        Image.Emit(new Op(OpType.CallSharp, t, name, parameters!));
+        Image.Emit(new Op(OpType.CallSharp, t, name, parameters ?? []));
 
     public void SetLabel(string labelName)
     {

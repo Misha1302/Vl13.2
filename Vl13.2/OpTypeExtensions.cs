@@ -47,7 +47,7 @@ public static class OpTypeExtensions
         v is OpType.Eq or OpType.Neq or OpType.Lt or OpType.Le or OpType.Gt or OpType.Ge;
 
     public static bool IsBranch(this OpType v) =>
-        v is OpType.Br or OpType.BrZero or OpType.BrOne or OpType.Ret;
+        v is OpType.Br or OpType.BrZero or OpType.BrOne or OpType.Ret or OpType.JumpToAddress;
 
     public static bool IsMathOp(this OpType v) =>
         v is OpType.Add or OpType.Sub or OpType.Mul or OpType.Div or OpType.Mod;

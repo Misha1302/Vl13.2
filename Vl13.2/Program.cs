@@ -67,16 +67,27 @@ VlTranslator CreateTranslator()
     var module = new VlModuleBuilder([new Mli("I64", "globalVar", false)]);
 
     var main = module.AddFunction("main", [], AsmType.I64, []);
-    
-    main.FuncAddress("hello");
-    main.CallAddress([], AsmType.I64);
+
+    main.FuncAddress("catch"); // push catch to exceptions stack
+    main.CallFunc("setCatch");
+    main.Drop();
+
+    main.ThrowEx(); // goto catch
+
+    main.DropCatch(); // end of try block
+
+    main.PushI(11); // must not to be executed
     main.WriteLine(typeof(long));
     main.Drop();
-    
+
     main.Ret(() => main.PushI(0));
 
-    var hello = module.AddFunction("hello", [], AsmType.I64, []);
-    hello.Ret(() => hello.PushI(111));
+
+    var hello = module.AddFunction("catch", [], AsmType.I64, []);
+    hello.PushI(-1000);
+    hello.WriteLine(typeof(long));
+    hello.Drop();
+    hello.Ret(() => hello.PushI(0));
 
 
     var vlTranslator = new VlTranslator(module.Compile());

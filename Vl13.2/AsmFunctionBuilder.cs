@@ -253,4 +253,16 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
         return list.ToArray();
     }
+
+    public void DropCatch()
+    {
+        CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PopAddress));
+        Drop();
+    }
+
+    public void ThrowEx()
+    {
+        FuncAddress("throwEx");
+        JumpToAddress();
+    }
 }
