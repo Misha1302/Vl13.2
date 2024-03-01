@@ -11,8 +11,8 @@ when you call sharp function, dont forgot for shadow space
 
 */
 
-// TODO: strings?
 // TODO: syntax?
+// TODO: strings?
 // TODO: implement all/most instructions?
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))?
 
@@ -60,37 +60,19 @@ public static class Program
     {
         var module = new VlModuleBuilder();
 
-        var main = module.AddFunction("main", [], []);
+        var main = module.AddFunction("main", [], [new Mli("I64", "returnValue")]);
 
-        main.TryCatch(
-            () =>
-            {
-                main.CallFunc("breakFunc");
+        main.CallFunc("hello", () => main.LocAddress("returnValue"));
 
-                main.PushI(11); // must not to be executed
-                main.WriteLine(typeof(long));
-                main.Drop();
-            },
-            () =>
-            {
-                main.PushI(-1000); // must be executed if try block thrown exception
-                main.WriteLine(typeof(long));
-                main.Drop();
-            }
-        );
-
-        main.PushI(1001); // must be executed too
+        main.GetLocal("returnValue");
         main.WriteLine(typeof(long));
-        main.Drop();
 
         main.Ret();
 
 
-        var breakFunc = module.AddFunction("breakFunc", [], []);
-        breakFunc.CallFunc("breakFunc2");
-
-        var breakFunc2 = module.AddFunction("breakFunc2", [], []);
-        breakFunc2.ThrowEx();
+        var hello = module.AddFunction("hello", [new Mli("I64", "returnValue", true)], []);
+        hello.SetLocal("returnValue", () => hello.PushI(123));
+        hello.Ret();
 
 
         var vlTranslator = new VlTranslator(module.Compile());
