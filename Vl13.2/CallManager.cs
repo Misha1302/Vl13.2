@@ -1,6 +1,7 @@
 ﻿namespace Vl13._2;
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Iced.Intel;
 
 public class CallManager(Assembler asm, StackManager sm)
@@ -50,7 +51,7 @@ public class CallManager(Assembler asm, StackManager sm)
         Clear(asm, allocatedBytes);
         PushReturnValue(tuple);
     }
-
+    
     private void PushReturnValue((MethodInfo mi, nint ptr) tuple)
     {
         var rett = tuple.mi.ReturnType;

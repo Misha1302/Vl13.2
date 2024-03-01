@@ -1,11 +1,11 @@
 ﻿namespace Vl13._2;
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Math = Math;
 
 public static class VlRuntimeHelper
 {
-    private static readonly Stack<long> _stack = new();
+    private static readonly Stack<(long address, long rsp, long rbp)> _stack = new();
 
     public static double RemF64(double a, double b) =>
         (Math.Abs(a) - Math.Abs(b) * Math.Floor(Math.Abs(a) / Math.Abs(b))) * Math.Sign(a);
@@ -57,6 +57,11 @@ public static class VlRuntimeHelper
     public static double I64ToF64(long value) => value;
     public static long F64ToI64(double value) => (long)(value + 0.0001);
 
-    public static void PushAddress(long address) => _stack.Push(address);
-    public static long PopAddress() => _stack.Pop();
+    public static void PushAddress(long address, long rsp, long rbp) => _stack.Push((address, rsp, rbp));
+
+    [MethodImpl(MethodImplOptions.NoOptimization)]
+    public static unsafe void PopAddress(long addressPtr, long rspPtr, long rbpPtr) =>
+        (*(long*)(void*)addressPtr, *(long*)(void*)rspPtr, *(long*)(void*)rbpPtr) = _stack.Pop();
+
+    public static void DropAddress() => _stack.Pop();
 }

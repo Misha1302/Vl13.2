@@ -20,6 +20,7 @@ when you call sharp function, dont forgot for shadow space
 // TODO: implement all/most instructions?
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))?
 
+
 unsafe
 {
     delegate*<none> nativeFunction = null;
@@ -60,14 +61,14 @@ long MeasureTime(Action method)
 
 VlTranslator CreateTranslator()
 {
-    var module = new VlModuleBuilder([new Mli("I64", "globalVar", true)]);
+    var module = new VlModuleBuilder();
 
     var main = module.AddFunction("main", [], []);
 
     main.TryCatch(
         () =>
         {
-            main.ThrowEx(); // goto catch
+            main.CallFunc("breakFunc");
 
             main.PushI(11); // must not to be executed
             main.WriteLine(typeof(long));
@@ -86,6 +87,13 @@ VlTranslator CreateTranslator()
     main.Drop();
 
     main.Ret();
+
+
+    var breakFunc = module.AddFunction("breakFunc", [], []);
+    breakFunc.CallFunc("breakFunc2");
+
+    var breakFunc2 = module.AddFunction("breakFunc2", [], []);
+    breakFunc2.ThrowEx();
 
 
     var vlTranslator = new VlTranslator(module.Compile());

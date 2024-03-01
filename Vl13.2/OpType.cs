@@ -77,5 +77,7 @@ public enum OpType
     Init,
     End,
     Function,
-    Nop
+    Nop,
+    PushRsp,
+    PushRbp
 }

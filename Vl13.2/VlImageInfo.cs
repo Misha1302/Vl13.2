@@ -83,6 +83,8 @@ public partial record VlImageInfo
     public void End() => Image.Emit(new Op(OpType.End, null));
     public void SetLabel(string labelName) => Image.Emit(new Op(OpType.SetLabel, labelName));
     public void StoreDataToLabel(string name) => Image.Emit(new Op(OpType.StoreDataToLabel, name));
+    public void PushRsp() => Image.Emit(new Op(OpType.PushRsp));
+    public void PushRbp() => Image.Emit(new Op(OpType.PushRbp));
 
     public void LoadDataFromLabel(string name, AsmType type) =>
         Image.Emit(new Op(OpType.LoadDataFromLabel, name, type));

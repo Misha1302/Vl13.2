@@ -27,7 +27,7 @@ public static class OpTypeExtensions
     }
 
     public static bool IsInitOp(this OpType v) => v is OpType.Init or OpType.End or OpType.CreateDataLabel;
-    public static bool IsPush(this OpType v) => v is OpType.Push;
+    public static bool IsPush(this OpType v) => v is OpType.Push or OpType.PushRbp or OpType.PushRsp;
     public static bool IsDrop(this OpType v) => v is OpType.Drop;
     public static bool IsDup(this OpType v) => v is OpType.Dup;
 

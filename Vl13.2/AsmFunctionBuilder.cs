@@ -2,7 +2,7 @@
 
 public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
 {
-    private Dictionary<string, LocalInfo> _localsList = new();
+    public Dictionary<string, LocalInfo> LocalsList = new();
     private Dictionary<string, string> _localsStructures = new();
 
     public void Write(Type valueType) => CallSharp(typeof(Console), nameof(Console.Write), [valueType]);
@@ -12,7 +12,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void DeclareLocals(IEnumerable<LocalInfo> localInfos, Dictionary<string, string> localsStructures)
     {
-        _localsList = localInfos.ToDictionary(x => x.Name, x => x);
+        LocalsList = localInfos.ToDictionary(x => x.Name, x => x);
         _localsStructures = localsStructures;
     }
 
@@ -32,6 +32,11 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         Br(whileStart);
 
         SetLabel(whileEnd);
+    }
+
+    public void AddLocal(LocalInfo li)
+    {
+        LocalsList.Add(li.Name, li);
     }
 
     public void SetLocal(string locName, Action? value, bool canSetByRef = true)
@@ -98,7 +103,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     () => GetLocal(locName),
                     () =>
                     {
-                        if (_localsList[locName].Type == AsmType.I64)
+                        if (LocalsList[locName].Type == AsmType.I64)
                             PushI(1);
                         else PushF(1.0);
                     }
@@ -168,7 +173,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     )
     {
         if (!_localsStructures.TryGetValue(locName, out var type))
-            loc(_localsList[locName]);
+            loc(LocalsList[locName]);
         else if (reverse)
             foreach (var pair in Module.Structures[type].Reverse())
                 structure(pair.Key);
@@ -249,13 +254,30 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void DropCatch()
     {
-        CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PopAddress));
+        CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.DropAddress));
         Drop();
     }
 
     public void ThrowEx()
     {
+        var address = Guid.NewGuid().ToString();
+        var rsp = Guid.NewGuid().ToString();
+        var rbp = Guid.NewGuid().ToString();
+
+        AddLocal(new LocalInfo(AsmType.I64, address, false));
+        AddLocal(new LocalInfo(AsmType.I64, rsp, false));
+        AddLocal(new LocalInfo(AsmType.I64, rbp, false));
+
+        LocAddress(address);
+        LocAddress(rsp);
+        LocAddress(rbp);
+
         CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PopAddress));
+
+        GetLocal(address);
+        GetLocal(rsp);
+        GetLocal(rbp);
+
         JumpToAddress();
     }
 
@@ -266,6 +288,8 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var tryCatchEndName = "finallyFunc_" + Guid.NewGuid();
 
         FuncAddress(catchName);
+        PushRsp();
+        PushRbp();
         CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PushAddress), [typeof(long)]);
         Drop();
         tryAct();

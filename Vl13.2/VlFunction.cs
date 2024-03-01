@@ -88,6 +88,12 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
 
                 module.Assembler.ret();
                 break;
+            case OpType.PushRbp:
+                module.StackManager.Push(rbp);
+                break;
+            case OpType.PushRsp:
+                module.StackManager.Push(rsp);
+                break;
             case OpType.Push:
                 if (op.Params?[0] is long)
                     PushConst(op.Arg<long>(0));
@@ -245,10 +251,8 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.StackManager.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
             case OpType.JumpToAddress:
-                // module.Assembler.mov(rsp, rbp);
-                // module.Assembler.pop(rbp);
-
-                module.StackManager.Pop(rax);
+                // need to set rsp ans rbp
+                module.StackManager.PopRegs(rbp, rsp, rax); // rax - address to jump
                 module.Assembler.jmp(rax);
                 break;
             case OpType.Dup:
