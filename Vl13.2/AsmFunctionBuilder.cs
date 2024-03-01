@@ -1,7 +1,6 @@
 ﻿namespace Vl13._2;
 
-public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes, AsmType ReturnType)
-    : VlImageInfo(Name, ArgTypes, ReturnType)
+public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
 {
     private Dictionary<string, LocalInfo> _localsList = new();
     private Dictionary<string, string> _localsStructures = new();
@@ -33,12 +32,6 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         Br(whileStart);
 
         SetLabel(whileEnd);
-    }
-
-    public void Ret(Action result)
-    {
-        result();
-        Ret();
     }
 
     public void SetLocal(string locName, Action? value, bool canSetByRef = true)
@@ -237,9 +230,9 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         );
     }
 
-    public void CallAddress(string[] args, AsmType i64)
+    public void CallAddress(string[] args)
     {
-        base.CallAddress(ToTypes(args), i64);
+        base.CallAddress(ToTypes(args));
     }
 
     private AsmType[] ToTypes(string[] args)

@@ -74,14 +74,8 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
 
                 break;
             case OpType.End:
-                module.StackManager.Pop(rax);
-
-                module.Assembler.push(rax);
-                module.Assembler.push(rax);
                 module.Assembler.mov(rcx, r15);
                 module.Assembler.call(ReflectionManager.GetPtr(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.Free)));
-                module.Assembler.pop(rax);
-                module.Assembler.pop(rax);
 
                 module.Assembler.pop(r14);
                 module.Assembler.pop(r15);
@@ -187,9 +181,6 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 CmpAndJump(op, 0);
                 break;
             case OpType.Ret:
-                if (module.StackManager.TypesCount() == 0)
-                    Thrower.Throw(new InvalidOperationException("No value to return"));
-
                 module.Assembler.mov(rsp, rbp);
                 module.Assembler.pop(rbp);
                 module.Assembler.ret();
@@ -240,7 +231,6 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.StackManager.SubTypes(op.Arg<AsmType[]>(0).Length);
                 module.StackManager.Pop(rax);
                 module.Assembler.call(rax);
-                module.StackManager.AddTypes([op.Arg<AsmType>(1)]);
                 break;
             case OpType.CallFunc:
                 var fName = op.Arg<string>(0);
@@ -248,7 +238,6 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
 
                 module.StackManager.SubTypes(f.ArgTypes.Length);
                 module.Assembler.call(module.LabelsManager.GetOrAddLabel(fName).Label);
-                module.StackManager.AddTypes([f.ReturnType]);
                 break;
             case OpType.LocAddress:
                 module.Assembler.mov(rax, rbp);

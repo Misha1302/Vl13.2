@@ -4,6 +4,7 @@ public class VlModuleBuilder
 {
     private readonly List<VlImageInfo> _imageInfos = [];
     private readonly Dictionary<string, Dictionary<string, AsmType>> _structures = new();
+
     public readonly Dictionary<string, LocalInfo> Globals;
     public readonly Dictionary<string, string> GlobalsOfStructureTypes = new();
 
@@ -30,7 +31,7 @@ public class VlModuleBuilder
         var index = _imageInfos.FindIndex(x => x.Name == "dataFunc");
         if (index != -1) _imageInfos.RemoveAt(index);
 
-        var dataFunc = AddFunction("dataFunc", [], AsmType.None, []);
+        var dataFunc = AddFunction("dataFunc", [], []);
         foreach (var global in Globals)
             dataFunc.CreateDataLabel(global.Key);
 
@@ -41,23 +42,18 @@ public class VlModuleBuilder
 
     private void CreateInitFunction()
     {
-        var init = AddFunction("init", [], AsmType.None, []);
+        var init = AddFunction("init", [], []);
         init.Init();
         init.CallFunc("main");
         init.End();
     }
 
-    public AsmFunctionBuilder AddFunction(
-        string name,
-        Mli[] args,
-        AsmType returnType,
-        Mli[] locals
-    )
+    public AsmFunctionBuilder AddFunction(string name, Mli[] args, Mli[] locals)
     {
         var argsInfos = ToInfos(args, out var localsStructures);
         var localsInfos = ToInfos(locals, out localsStructures);
 
-        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray(), returnType);
+        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray());
         func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
 
         foreach (var t in argsInfos)
