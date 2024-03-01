@@ -262,7 +262,26 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void ThrowEx()
     {
-        FuncAddress("throwEx");
+        CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PopAddress));
         JumpToAddress();
+    }
+
+
+    public void TryCatch(Action tryAct, Action catchAct)
+    {
+        var catchName = "catchFunc_" + Guid.NewGuid();
+        var tryCatchEndName = "finallyFunc_" + Guid.NewGuid();
+
+        FuncAddress(catchName);
+        CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PushAddress), [typeof(long)]);
+        Drop();
+        tryAct();
+        DropCatch();
+        Br(tryCatchEndName);
+
+        SetLabel(catchName);
+        catchAct();
+
+        SetLabel(tryCatchEndName);
     }
 }

@@ -1,10 +1,9 @@
 ﻿namespace Vl13._2;
 
-using Iced.Intel;
-
 public class LabelsManager(VlModule module)
 {
-    private readonly GetOrAddCollection<Label> _col = new(module.Assembler.CreateLabel);
+    private readonly GetOrAddCollection<VlLabel> _col = new(name => new VlLabel(module.Assembler.CreateLabel(name)));
+    public IReadOnlyDictionary<string, VlLabel> Labels => _col.Items;
 
-    public ref Label GetOrAddLabel(string name) => ref _col.GetOrAdd(name);
+    public VlLabel GetOrAddLabel(string name) => _col.GetOrAdd(name);
 }

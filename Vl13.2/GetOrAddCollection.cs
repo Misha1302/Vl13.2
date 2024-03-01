@@ -2,13 +2,14 @@
 
 public class GetOrAddCollection<T>(Func<string, T> valueCreator)
 {
-    private readonly Dictionary<string, T> _labels = new();
+    private readonly Dictionary<string, T> _items = new();
+    public IReadOnlyDictionary<string, T> Items => _items;
 
-    public ref T GetOrAdd(string name)
+    public T GetOrAdd(string name)
     {
-        if (!_labels.ContainsKey(name)) // no need to call func if key contains
-            _labels.Add(name, valueCreator(name));
+        if (!_items.ContainsKey(name)) // no need to call func if key contains
+            _items.Add(name, valueCreator(name));
 
-        return ref new[] { _labels[name] }[0];
+        return _items[name];
     }
 }

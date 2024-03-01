@@ -150,10 +150,10 @@ public class StackManager(VlModule module, StackPositioner sp)
             int3
         */
 
-        var @else = module.Assembler.CreateLabel();
+        var @else = module.LabelsManager.GetOrAddLabel(Guid.NewGuid().ToString());
 
         module.Assembler.cmp(sp.Index, sp.MaxIndexValue);
-        module.Assembler.jbe(@else);
+        module.Assembler.jbe(@else.Label);
 
         module.Assembler.sub(rsp, 32);
         module.Assembler.mov(rcx, sp.Index);

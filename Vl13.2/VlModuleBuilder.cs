@@ -37,33 +37,7 @@ public class VlModuleBuilder
         return _imageInfos;
     }
 
-    private void CreateBuildinFunctions()
-    {
-        CreateInitFunction();
-
-        CreateSetCatchFunction();
-        CreateThrowExceptionFunction();
-    }
-
-    private void CreateThrowExceptionFunction()
-    {
-        var throwExFunc = AddFunction("throwEx", [], AsmType.None, []);
-        throwExFunc.CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PopAddress));
-        // throwExFunc.CallAddress([], AsmType.None);
-        // throwExFunc.Drop();
-        //
-        // throwExFunc.PushI(0);
-        // throwExFunc.Ret();
-        throwExFunc.JumpToAddress();
-    }
-
-    private void CreateSetCatchFunction()
-    {
-        var setCatch = AddFunction("setCatch", [new Mli("I64", "catchFuncAddress", false)], AsmType.None, []);
-        setCatch.GetLocal("catchFuncAddress");
-        setCatch.CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PushAddress), [typeof(long)]);
-        setCatch.Ret();
-    }
+    private void CreateBuildinFunctions() => CreateInitFunction();
 
     private void CreateInitFunction()
     {

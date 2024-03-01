@@ -80,7 +80,10 @@ public partial record VlImageInfo
     public void Div() => Image.Emit(new Op(OpType.Div, null));
     public void Mod() => Image.Emit(new Op(OpType.Mod, null));
     public void CallFunc(string name) => Image.Emit(new Op(OpType.CallFunc, name));
-    public void CallAddress(AsmType[] args, AsmType returnType) => Image.Emit(new Op(OpType.CallAddress, args, returnType));
+
+    public void CallAddress(AsmType[] args, AsmType returnType) =>
+        Image.Emit(new Op(OpType.CallAddress, args, returnType));
+
     public void Ret() => Image.Emit(new Op(OpType.Ret, null));
     public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));
     public void Dup() => Image.Emit(new Op(OpType.Dup, null));
@@ -90,8 +93,5 @@ public partial record VlImageInfo
     public void CallSharp(Type t, string name, Type[]? parameters = null) =>
         Image.Emit(new Op(OpType.CallSharp, t, name, parameters ?? []));
 
-    public void SetLabel(string labelName)
-    {
-        Image.Emit(new Op(OpType.SetLabel, labelName));
-    }
+    public void SetLabel(string labelName) => Image.Emit(new Op(OpType.SetLabel, labelName));
 }

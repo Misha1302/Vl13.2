@@ -1,5 +1,6 @@
 ﻿namespace Vl13._2;
 
+using System.Diagnostics;
 using Iced.Intel;
 
 public class VlTranslator(List<VlImageInfo> images)
@@ -22,6 +23,7 @@ public class VlTranslator(List<VlImageInfo> images)
         foreach (var image in images)
             module.Translate(image);
 
+        Debug.Assert(module.LabelsManager.Labels.All(x => x.Value.Label.InstructionIndex != -1));
         return module.Assembler;
     }
 }

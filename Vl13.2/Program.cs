@@ -18,7 +18,7 @@ when you call sharp function, dont forgot for shadow space
 
 */
 
-// TODO: implement exceptions via long jumps - make global var, that will be contains stack for jumps and make functions for save position and jump to catch blocks
+// TODO: 
 // TODO: implement all/most instructions
 // TODO: add optimizations (associate registers with their in-memory values (and check to see if those memory locations have been modified))
 
@@ -64,30 +64,36 @@ long MeasureTime(Action method)
 
 VlTranslator CreateTranslator()
 {
-    var module = new VlModuleBuilder([new Mli("I64", "globalVar", false)]);
+    var module = new VlModuleBuilder([new Mli("I64", "globalVar", true)]);
 
     var main = module.AddFunction("main", [], AsmType.I64, []);
 
-    main.FuncAddress("catch"); // push catch to exceptions stack
-    main.CallFunc("setCatch");
-    main.Drop();
+    main.TryCatch(
+        () =>
+        {
+            main.ThrowEx(); // goto catch
 
-    main.ThrowEx(); // goto catch
+            main.PushI(11); // must not to be executed
+            main.WriteLine(typeof(long));
+            main.Drop();
+        },
+        () =>
+        {
+            main.PushI(-1000); // must be executed if try block thrown exception
+            main.WriteLine(typeof(long));
+            main.Drop();
+        }
+    );
 
-    main.DropCatch(); // end of try block
-
-    main.PushI(11); // must not to be executed
+    main.PushI(1001); // must be executed too
     main.WriteLine(typeof(long));
     main.Drop();
 
     main.Ret(() => main.PushI(0));
 
-
-    var hello = module.AddFunction("catch", [], AsmType.I64, []);
-    hello.PushI(-1000);
-    hello.WriteLine(typeof(long));
-    hello.Drop();
-    hello.Ret(() => hello.PushI(0));
+    // output must be:
+    // -1000 - from catch
+    // 1001 - from finally
 
 
     var vlTranslator = new VlTranslator(module.Compile());

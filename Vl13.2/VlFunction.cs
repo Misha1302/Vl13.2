@@ -16,7 +16,6 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
     {
         module.StackManager.ResetTypes();
         module.StackManager.AddTypes(imageInfo.ArgTypes);
-        module.LabelsManager.GetOrAddLabel("return_label");
 
         EmitDebug(new Op(OpType.Function, imageInfo.Name));
 
@@ -49,13 +48,14 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
         {
             case OpType.StoreDataToLabel:
                 module.StackManager.Pop(rax);
-                module.Assembler.mov(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))], rax);
+                module.Assembler.mov(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label], rax);
                 break;
             case OpType.LoadDataFromLabel:
-                module.StackManager.Push(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))], op.Arg<AsmType>(1));
+                module.StackManager.Push(__[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label],
+                    op.Arg<AsmType>(1));
                 break;
             case OpType.CreateDataLabel:
-                module.Assembler.Label(ref module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                SetLabel(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)), false);
                 module.Assembler.dq(0);
                 break;
             case OpType.Init:
@@ -178,7 +178,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Ge:
                 break;
             case OpType.Br:
-                module.Assembler.jmp(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
+                module.Assembler.jmp(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label);
                 break;
             case OpType.BrOne:
                 CmpAndJump(op, 1);
@@ -247,7 +247,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 var f = module.Images.First(x => x.Name == fName);
 
                 module.StackManager.SubTypes(f.ArgTypes.Length);
-                module.Assembler.call(module.LabelsManager.GetOrAddLabel(fName));
+                module.Assembler.call(module.LabelsManager.GetOrAddLabel(fName).Label);
                 module.StackManager.AddTypes([f.ReturnType]);
                 break;
             case OpType.LocAddress:
@@ -256,9 +256,9 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.StackManager.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
             case OpType.JumpToAddress:
-                module.Assembler.mov(rsp, rbp);
-                module.Assembler.pop(rbp);
-                
+                // module.Assembler.mov(rsp, rbp);
+                // module.Assembler.pop(rbp);
+
                 module.StackManager.Pop(rax);
                 module.Assembler.jmp(rax);
                 break;
@@ -271,8 +271,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Function:
                 break;
             case OpType.FuncAddress:
-                module.Assembler.lea(rax, __[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0))]);
-
+                module.Assembler.lea(rax, __[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label]);
                 module.StackManager.Push(rax);
                 break;
             default:
@@ -281,10 +280,14 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
         }
     }
 
-    public void SetLabel(Label label)
+    public void SetLabel(VlLabel label, bool needNop = true)
     {
-        module.Assembler.Label(ref label);
-        module.Assembler.nop();
+        var labelLabel = label.Label;
+        module.Assembler.Label(ref labelLabel);
+        label.Label = labelLabel;
+
+        if (needNop)
+            module.Assembler.nop();
     }
 
     private void PushConst<T>(T value) where T : struct =>
@@ -294,7 +297,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
     {
         module.StackManager.Pop(rax);
         module.Assembler.cmp(rax, cmpValue);
-        module.Assembler.je(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
+        module.Assembler.je(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label);
     }
 
     private void BinaryOperation(Action<AssemblerRegister64, AssemblerRegister64> act,
