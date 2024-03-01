@@ -251,7 +251,6 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 module.StackManager.PushAddress(rax, op.Arg<AsmType>(1));
                 break;
             case OpType.JumpToAddress:
-                // need to set rsp ans rbp
                 module.StackManager.PopRegs(rbp, rsp, rax); // rax - address to jump
                 module.Assembler.jmp(rax);
                 break;
@@ -263,7 +262,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
             case OpType.Body:
             case OpType.Function:
                 break;
-            case OpType.FuncAddress:
+            case OpType.LabelAddress:
                 module.Assembler.lea(rax, __[module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label]);
                 module.StackManager.Push(rax);
                 break;

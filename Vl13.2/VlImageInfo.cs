@@ -39,7 +39,7 @@ public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
 public partial record VlImageInfo
 {
     public void JumpToAddress() => Image.Emit(new Op(OpType.JumpToAddress));
-    public void FuncAddress(string name) => Image.Emit(new Op(OpType.FuncAddress, name));
+    public void LabelAddress(string name) => Image.Emit(new Op(OpType.LabelAddress, name));
     public void CreateDataLabel(string name) => Image.Emit(new Op(OpType.CreateDataLabel, name));
     public void PushI(long i) => Image.Emit(new Op(OpType.Push, i));
     public void PushF(double i) => Image.Emit(new Op(OpType.Push, i));

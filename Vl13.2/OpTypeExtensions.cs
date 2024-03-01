@@ -36,7 +36,7 @@ public static class OpTypeExtensions
 
     public static bool IsLoad(this OpType v) =>
         v is OpType.Load8 or OpType.Load16 or OpType.Load32 or OpType.Load64 or OpType.Load64 or OpType.LocAddress
-            or OpType.LoadDataFromLabel or OpType.FuncAddress;
+            or OpType.LoadDataFromLabel or OpType.LabelAddress;
 
     public static bool IsConv(this OpType v) =>
         v is OpType.I8ToI64 or OpType.I16ToI64 or OpType.I32ToI64

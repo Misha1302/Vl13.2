@@ -20,7 +20,7 @@ public enum OpType
     Load8,
 
     LocAddress,
-    FuncAddress,
+    LabelAddress,
 
     StoreDataToLabel,
     LoadDataFromLabel,

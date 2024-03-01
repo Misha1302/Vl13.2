@@ -1,6 +1,5 @@
 ﻿namespace Vl13._2;
 
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 public static class VlRuntimeHelper
@@ -59,7 +58,6 @@ public static class VlRuntimeHelper
 
     public static void PushAddress(long address, long rsp, long rbp) => _stack.Push((address, rsp, rbp));
 
-    [MethodImpl(MethodImplOptions.NoOptimization)]
     public static unsafe void PopAddress(long addressPtr, long rspPtr, long rbpPtr) =>
         (*(long*)(void*)addressPtr, *(long*)(void*)rspPtr, *(long*)(void*)rbpPtr) = _stack.Pop();
 

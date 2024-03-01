@@ -1,6 +1,6 @@
 ﻿namespace Vl13._2;
 
-public record LocalInfo(AsmType Type, string Name, bool IsByRef)
+public record LocalInfo(AsmType Type, string Name, bool IsByRef = false)
 {
     public virtual bool Equals(LocalInfo? other)
     {

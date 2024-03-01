@@ -264,9 +264,9 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var rsp = Guid.NewGuid().ToString();
         var rbp = Guid.NewGuid().ToString();
 
-        AddLocal(new LocalInfo(AsmType.I64, address, false));
-        AddLocal(new LocalInfo(AsmType.I64, rsp, false));
-        AddLocal(new LocalInfo(AsmType.I64, rbp, false));
+        AddLocal(new LocalInfo(AsmType.I64, address));
+        AddLocal(new LocalInfo(AsmType.I64, rsp));
+        AddLocal(new LocalInfo(AsmType.I64, rbp));
 
         LocAddress(address);
         LocAddress(rsp);
@@ -287,7 +287,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var catchName = "catchFunc_" + Guid.NewGuid();
         var tryCatchEndName = "finallyFunc_" + Guid.NewGuid();
 
-        FuncAddress(catchName);
+        LabelAddress(catchName);
         PushRsp();
         PushRbp();
         CallSharp(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.PushAddress), [typeof(long)]);
