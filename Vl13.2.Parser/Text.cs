@@ -13,8 +13,10 @@ public static class Text
             System.Console.WriteLine.i64(i)
             i = 0
             System.Console.WriteLine.i8(i)
-            i = -2333
-            System.Console.WriteLine.i32(i)
+            i = 45 // 45
+            i = i - 100 // -55
+            i = i * -2 // 110
+            System.Console.WriteLine.i32(i % 3) // 2
             ret
         }
         """;

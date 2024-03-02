@@ -91,6 +91,29 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+    public override None VisitSumSubExpr(GrammarParser.SumSubExprContext context)
+    {
+        foreach (var expr in context.expression())
+            Visit(expr);
+
+        if (context.PLUS() != null) _curFunc.Add();
+        else if (context.MINUS() != null) _curFunc.Sub();
+
+        return Nothing;
+    }
+
+    public override None VisitMulDivModExpr(GrammarParser.MulDivModExprContext context)
+    {
+        foreach (var expr in context.expression())
+            Visit(expr);
+
+        if (context.STAR() != null) _curFunc.Mul();
+        else if (context.DIV() != null) _curFunc.Div();
+        else if (context.MOD() != null) _curFunc.Mod();
+
+        return Nothing;
+    }
+
 
     public override None VisitIdentifierExpr(GrammarParser.IdentifierExprContext context)
     {

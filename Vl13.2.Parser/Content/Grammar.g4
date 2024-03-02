@@ -24,12 +24,17 @@ expression:
     | FLOAT                                                 #floatExpr
     | STRING                                                #stringExpr
     | '(' expression ')'                                    #parentsExpr
-    | expression ('*' | '/' | '%') expression               #mulDivModExpr
-    | expression ('+' | '-') expression                     #sumSubExpr
+    | expression (STAR | DIV | MOD) expression              #mulDivModExpr
+    | expression (PLUS | MINUS) expression                  #sumSubExpr
     | ampersand IDENTIFIER                                  #getAddressExpr
     | expression '(' (expression (',' expression)*)? ')'    #callExpr
     ;
 
+STAR: '*';
+DIV: '/';
+MOD: '%';
+PLUS: '+';
+MINUS: '-';
 
 IDENTIFIER: [a-zA-Z_][a-zA-Z_0-9.]*;
 STRING: ('\'' (('\\\'')|.)*? '\'') | ('"' (('\\"')|.)*? '"');
