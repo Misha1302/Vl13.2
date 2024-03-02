@@ -179,35 +179,25 @@ public class MainVisitor : GrammarBaseVisitor<None>
         foreach (var e in context.expression().Skip(1).Reverse())
             Visit(e);
 
-        if (ReflectionManager.Methods.TryGetValue(fName, out var tuple))
-        {
-            _curFunc.CallSharp(tuple);
-        }
-        else if (fName == "f64Toi64")
-        {
-            _curFunc.F64ToI64();
-        }
-        else if (fName == "i64Toi32")
-        {
-            _curFunc.I64ToI32();
-        }
-        else if (fName == "i64Toi16")
-        {
-            _curFunc.I64ToI16();
-        }
-        else if (fName == "i64Toi8")
-        {
-            _curFunc.I64ToI8();
-        }
-        else if (fName == "i8ToI64")
-        {
-            _curFunc.I8ToI64();
-        }
-        else if (fName == "i16Toi64")
-        {
-            _curFunc.I16ToI64();
-        }
-        else
+        Action a =
+            ReflectionManager.Methods.TryGetValue(fName, out var tuple)
+                ? () => _curFunc.CallSharp(tuple)
+                : fName switch
+                {
+                    "f64Toi64" => _curFunc.F64ToI64,
+                    "i64Toi32" => _curFunc.I64ToI32,
+                    "i64Toi16" => _curFunc.I64ToI16,
+                    "i64Toi8" => _curFunc.I64ToI8,
+                    "i8ToI64" => _curFunc.I8ToI64,
+                    "i16Toi64" => _curFunc.I16ToI64,
+                    _ => CallFunc
+                };
+
+        a();
+
+        return Nothing;
+
+        void CallFunc()
         {
             var returnType = _preVisitor.Functions[fName].returnType;
             var isNotNone = returnType != _noneType;
@@ -221,11 +211,8 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
             _curFunc.CallFunc(fName);
 
-            if (isNotNone)
-                _curFunc.GetLocal(returnValueLocalName);
+            if (isNotNone) _curFunc.GetLocal(returnValueLocalName);
         }
-
-        return Nothing;
     }
 
     private static string TypesToString(ParameterInfo[] parameters)
