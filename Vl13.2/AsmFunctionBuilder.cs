@@ -246,7 +246,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     {
         var list = new List<AsmType>();
 
-        foreach (var arg in args)
+        foreach (var arg in args.Select(x => x.ToUpper()))
             if (!Module.Structures.TryGetValue(arg, out var value))
                 list.Add(Enum.Parse<AsmType>(arg));
             else list.AddRange(value.Select(x => x.Value));

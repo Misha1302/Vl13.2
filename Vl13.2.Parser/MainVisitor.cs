@@ -195,6 +195,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         a();
 
+
         return Nothing;
 
         void CallFunc()
@@ -213,6 +214,38 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
             if (isNotNone) _curFunc.GetLocal(returnValueLocalName);
         }
+    }
+
+    public override None VisitAddressCallExpr(GrammarParser.AddressCallExprContext context)
+    {
+        var returnType = context.type()[^1].GetText();
+        var isNotNone = returnType != _noneType;
+        var returnValueLocalName = Guid.NewGuid().ToString();
+
+        foreach (var e in context.expression().Skip(1).Reverse())
+            Visit(e);
+
+        if (isNotNone)
+        {
+            _curFunc.AddLocal(new ModuleLocalInfo(returnType, returnValueLocalName));
+            _curFunc.LocAddress(returnValueLocalName);
+        }
+
+        var typeContexts = context.type();
+
+        var types = typeContexts.Select(
+            (t, index) => isNotNone && index == 0
+                ? "I64"
+                : t.GetText()
+        ).ToArray();
+
+        Visit(context.expression(0));
+        _curFunc.CallAddress(types);
+
+        if (isNotNone)
+            _curFunc.GetLocal(returnValueLocalName);
+
+        return Nothing;
     }
 
     private static string TypesToString(ParameterInfo[] parameters)

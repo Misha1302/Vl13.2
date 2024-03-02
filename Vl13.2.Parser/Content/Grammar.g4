@@ -19,15 +19,16 @@ structDecl: 'struct' IDENTIFIER (varDecl (',' varDecl)*);
 ampersand: '&';
 
 expression:
-    IDENTIFIER                                              #identifierExpr
-    | INT                                                   #intExpr
-    | FLOAT                                                 #floatExpr
-    | STRING                                                #stringExpr
-    | '(' expression ')'                                    #parentsExpr
-    | expression (STAR | DIV | MOD) expression              #mulDivModExpr
-    | expression (PLUS | MINUS) expression                  #sumSubExpr
-    | ampersand IDENTIFIER                                  #getAddressExpr
-    | expression '(' (expression (',' expression)*)? ')'    #callExpr
+    IDENTIFIER                                                                                          #identifierExpr
+    | INT                                                                                               #intExpr
+    | FLOAT                                                                                             #floatExpr
+    | STRING                                                                                            #stringExpr
+    | expression (STAR | DIV | MOD) expression                                                          #mulDivModExpr
+    | expression (PLUS | MINUS) expression                                                              #sumSubExpr
+    | ampersand IDENTIFIER                                                                              #getAddressExpr
+    | expression '(' (expression (',' expression)*)? ')'                                                #callExpr
+    | expression '<' type (',' type)* '>' '(' (expression (',' expression)*)? ')'                       #addressCallExpr
+    | '(' expression ')'                                                                                #parentsExpr
     ;
 
 STAR: '*';
