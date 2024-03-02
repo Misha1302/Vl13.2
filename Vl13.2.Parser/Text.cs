@@ -9,13 +9,13 @@ public static class Text
         include 'main'
 
         func main -> none {
-            a : f64 = 2.32
-            a = a * a * a
-            System.Console.WriteLine.f64(a)
-            System.Console.WriteLine.i64(f64Toi64(a))
-            System.Console.WriteLine.i64(&main)
-            
-            ret
+            print1(12, 32)
+            print1(654, 53 - 54)
+        }
+        
+        func print1 x : i64, y : i64 -> none {
+            System.Console.WriteLine.i64(x)
+            System.Console.WriteLine.i64(y)
         }
         """;
 

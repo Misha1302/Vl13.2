@@ -23,6 +23,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), args, []);
         Visit(context.block());
+        _curFunc.Ret();
         _curFunc = null!;
 
         return Nothing;
@@ -153,7 +154,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var fName = context.expression(0).GetText();
 
-        foreach (var e in context.expression().Skip(1))
+        foreach (var e in context.expression().Skip(1).Reverse())
             Visit(e);
 
         if (ReflectionManager.Methods.TryGetValue(fName, out var tuple))
