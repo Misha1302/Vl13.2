@@ -91,6 +91,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+
     public override None VisitIdentifierExpr(GrammarParser.IdentifierExprContext context)
     {
         _curFunc.GetLocal(context.IDENTIFIER().GetText());

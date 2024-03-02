@@ -10,15 +10,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Antlr4" Version="4.6.6">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
+        <PackageReference Include="Antlr4" Version="4.6.6">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Antlr4.Runtime" Version="4.6.6"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Vl13.2\Vl13.2.csproj" />
+        <ProjectReference Include="..\Vl13.2\Vl13.2.csproj"/>
     </ItemGroup>
 
 </Project>

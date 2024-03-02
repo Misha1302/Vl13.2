@@ -7,7 +7,7 @@ public static class Text
     public static readonly string SimpleProgram =
         """
         include 'main'
-        
+
         func main -> none {
             i : i64 = -123
             System.Console.WriteLine.i64(i)
