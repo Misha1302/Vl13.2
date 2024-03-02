@@ -1,5 +1,7 @@
 ﻿namespace Vl13._2;
 
+using System.Reflection;
+
 public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
 {
     public readonly VlImage Image = new();
@@ -91,4 +93,7 @@ public partial record VlImageInfo
 
     public void CallSharp(Type t, string name, Type[]? parameters = null) =>
         Image.Emit(new Op(OpType.CallSharp, t, name, parameters ?? []));
+
+    public void CallSharp((MethodInfo mi, nint ptr) value) =>
+        Image.Emit(new Op(OpType.CallSharp, value));
 }

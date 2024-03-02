@@ -1,5 +1,7 @@
 ﻿namespace Vl13._2;
 
+using System.Reflection;
+
 public static class OpTypeExtensions
 {
     public static int StackOutput(this Op op, VlModule module)
@@ -9,7 +11,7 @@ public static class OpTypeExtensions
         if (type.IsPush()) return 1;
         if (type.IsDup()) return 1;
         if (type == OpType.CallFunc) return 1 - module.Images.First(x => x.Name == op.Arg<string>(0)).ArgTypes.Length;
-        if (type == OpType.CallSharp) return 1 - op.Arg<Type[]>(2).Length;
+        if (type == OpType.CallSharp) return 1 - CalcParamsLen(op);
         if (type == OpType.CallAddress) return 1 - op.Arg<AsmType[]>(0).Length;
         if (type.IsLoad()) return 1;
 
@@ -25,6 +27,11 @@ public static class OpTypeExtensions
 
         return Thrower.Throw<int>(new ArgumentOutOfRangeException());
     }
+
+    private static int CalcParamsLen(Op op) =>
+        op.Params?[0] is (MethodInfo, nint)
+            ? op.Arg<(MethodInfo, nint)>(0).Item1.GetParameters().Length
+            : op.Arg<Type[]>(2).Length;
 
     public static bool IsInitOp(this OpType v) => v is OpType.Init or OpType.End or OpType.CreateDataLabel;
     public static bool IsPush(this OpType v) => v is OpType.Push or OpType.PushRbp or OpType.PushRsp;

@@ -1,5 +1,6 @@
 ﻿namespace Vl13._2;
 
+using System.Reflection;
 using Iced.Intel;
 
 /// <summary>
@@ -226,11 +227,16 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 SetLabel(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)));
                 break;
             case OpType.CallSharp:
-                var tuple = ReflectionManager.Get(
-                    op.Arg<Type>(0),
-                    op.Arg<string>(1),
-                    op.Arg<Type[]>(2)
-                );
+                (MethodInfo mi, nint ptr) tuple;
+
+                if (op.Params?[0] is Type)
+                    tuple = ReflectionManager.Get(
+                        op.Arg<Type>(0),
+                        op.Arg<string>(1),
+                        op.Arg<Type[]>(2)
+                    );
+                else tuple = op.Arg<(MethodInfo, nint)>(0);
+
                 _callManager.Call(tuple);
                 break;
             case OpType.CallAddress:

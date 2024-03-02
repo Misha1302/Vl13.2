@@ -3,14 +3,14 @@
 program: line* EOF;
 line: NEWLINE* (include | expression | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
 
-include: 'include' STRING 'as' IDENTIFIER;
+include: 'include' STRING;
 
 varDecl: IDENTIFIER ':' type;
 functionDecl: 'func' IDENTIFIER (varDecl (',' varDecl)*)? '->' type block;
 
 block: '{' line* '}';
 type: ampersand? IDENTIFIER;
-ret: 'ret' expression;
+ret: 'ret' expression?;
 
 varSet: IDENTIFIER '=' expression;
 
@@ -27,8 +27,7 @@ expression:
     | expression ('*' | '/' | '%') expression               #mulDivModExpr
     | expression ('+' | '-') expression                     #sumSubExpr
     | ampersand IDENTIFIER                                  #getAddressExpr
-    | IDENTIFIER '(' (expression (',' expression)*)? ')'    #functionCall
-    | expression '(' (expression (',' expression)*)? ')'    #addressCall
+    | expression '(' (expression (',' expression)*)? ')'    #callExpr
     ;
 
 

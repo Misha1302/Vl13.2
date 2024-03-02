@@ -1,5 +1,7 @@
 ﻿namespace Vl13._2;
 
+using System.Reflection;
+
 public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
 {
     public Dictionary<string, LocalInfo> LocalsList = new();
