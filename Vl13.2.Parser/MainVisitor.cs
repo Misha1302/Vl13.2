@@ -114,6 +114,22 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+    public override None VisitFloatExpr(GrammarParser.FloatExprContext context)
+    {
+        _curFunc.PushF(TextToType.ToDouble(context.GetText()));
+
+        return Nothing;
+    }
+
+    public override None VisitGetAddressExpr(GrammarParser.GetAddressExprContext context)
+    {
+        var name = context.IDENTIFIER().GetText();
+        if (_curFunc.LocalsList.ContainsKey(name))
+            _curFunc.LocAddress(name);
+        else _curFunc.LabelAddress(name);
+
+        return Nothing;
+    }
 
     public override None VisitIdentifierExpr(GrammarParser.IdentifierExprContext context)
     {
@@ -142,7 +158,20 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         if (ReflectionManager.Methods.TryGetValue(fName, out var tuple))
             _curFunc.CallSharp(tuple);
-        else _curFunc.CallFunc(fName);
+        else if (fName == "f64Toi64")
+            _curFunc.F64ToI64();
+        else if (fName == "i64Toi32")
+            _curFunc.I64ToI32();
+        else if (fName == "i64Toi16")
+            _curFunc.I64ToI16();
+        else if (fName == "i64Toi8")
+            _curFunc.I64ToI8();
+        else if (fName == "i8ToI64")
+            _curFunc.I8ToI64();
+        else if (fName == "i16Toi64")
+            _curFunc.I16ToI64();
+        else
+            _curFunc.CallFunc(fName);
 
         return Nothing;
     }
