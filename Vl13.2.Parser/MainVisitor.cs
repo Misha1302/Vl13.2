@@ -1,6 +1,7 @@
 ﻿namespace Vl13._2.Parser;
 
 using System.Reflection;
+using Antlr4.Runtime.Tree;
 using Vl13._2.Parser.Content;
 using static None;
 
@@ -9,6 +10,21 @@ public class MainVisitor : GrammarBaseVisitor<None>
     private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
     private AsmFunctionBuilder _curFunc = null!;
+    private PreVisitor _preVisitor = null!; // ReSharper disable ConvertToConstant.Local
+    private readonly string _returnAddress = "returnValue<>";
+    private readonly string _noneType = "none";
+
+    public override None Visit(IParseTree tree)
+    {
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+        if (_preVisitor is not null)
+            return base.Visit(tree);
+
+        _preVisitor = new PreVisitor();
+        _preVisitor.Visit(tree);
+
+        return base.Visit(tree);
+    }
 
 
     public override None VisitFunctionDecl(GrammarParser.FunctionDeclContext context)
@@ -20,6 +36,9 @@ public class MainVisitor : GrammarBaseVisitor<None>
                 x.type().ampersand() != null
             )
         ).ToArray();
+
+        if (context.type().GetText() != _noneType)
+            args = new[] { new ModuleLocalInfo("I64", _returnAddress, true) }.Union(args).ToArray();
 
         _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), args, []);
         Visit(context.block());
@@ -146,6 +165,9 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitRet(GrammarParser.RetContext context)
     {
+        if (context.expression() != null)
+            _curFunc.SetLocal(_returnAddress, () => Visit(context.expression()));
+
         _curFunc.Ret();
         return Nothing;
     }
@@ -158,21 +180,50 @@ public class MainVisitor : GrammarBaseVisitor<None>
             Visit(e);
 
         if (ReflectionManager.Methods.TryGetValue(fName, out var tuple))
+        {
             _curFunc.CallSharp(tuple);
+        }
         else if (fName == "f64Toi64")
+        {
             _curFunc.F64ToI64();
+        }
         else if (fName == "i64Toi32")
+        {
             _curFunc.I64ToI32();
+        }
         else if (fName == "i64Toi16")
+        {
             _curFunc.I64ToI16();
+        }
         else if (fName == "i64Toi8")
+        {
             _curFunc.I64ToI8();
+        }
         else if (fName == "i8ToI64")
+        {
             _curFunc.I8ToI64();
+        }
         else if (fName == "i16Toi64")
+        {
             _curFunc.I16ToI64();
+        }
         else
+        {
+            var returnType = _preVisitor.Functions[fName].returnType;
+            var isNotNone = returnType != _noneType;
+            var returnValueLocalName = Guid.NewGuid().ToString();
+
+            if (isNotNone)
+            {
+                _curFunc.AddLocal(new ModuleLocalInfo(returnType, returnValueLocalName));
+                _curFunc.LocAddress(returnValueLocalName);
+            }
+
             _curFunc.CallFunc(fName);
+
+            if (isNotNone)
+                _curFunc.GetLocal(returnValueLocalName);
+        }
 
         return Nothing;
     }
