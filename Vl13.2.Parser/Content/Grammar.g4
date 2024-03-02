@@ -12,7 +12,7 @@ block: '{' line* '}';
 type: ampersand? IDENTIFIER;
 ret: 'ret' expression?;
 
-varSet: IDENTIFIER '=' expression;
+varSet: (IDENTIFIER | varDecl) '=' expression;
 
 structDecl: 'struct' IDENTIFIER (varDecl (',' varDecl)*);
 

@@ -9,9 +9,12 @@ public static class Text
         include 'main'
         
         func main -> none {
-            System.Console.WriteLine.i64(-123)
-            System.Console.WriteLine.i8(23)
-            System.Console.WriteLine.i32(-23)
+            i : i64 = -123
+            System.Console.WriteLine.i64(i)
+            i = 0
+            System.Console.WriteLine.i8(i)
+            i = -2333
+            System.Console.WriteLine.i32(i)
             ret
         }
         """;

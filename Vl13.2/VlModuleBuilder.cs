@@ -50,8 +50,9 @@ public class VlModuleBuilder
 
     public AsmFunctionBuilder AddFunction(string name, Mli[] args, Mli[] locals)
     {
-        var argsInfos = ToInfos(args, out var localsStructures);
-        var localsInfos = ToInfos(locals, out localsStructures);
+        var localsStructures = new Dictionary<string, string>();
+        var argsInfos = ToInfos(args, localsStructures);
+        var localsInfos = ToInfos(locals, localsStructures);
 
         var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray());
         func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
@@ -63,10 +64,9 @@ public class VlModuleBuilder
         return func;
     }
 
-    private List<LocalInfo> ToInfos(Mli[] arr, out Dictionary<string, string> localsStructures)
+    public List<LocalInfo> ToInfos(Mli[] arr, Dictionary<string, string> localsStructures)
     {
         var locals = new List<LocalInfo>();
-        localsStructures = new Dictionary<string, string>();
 
         foreach (var t in arr)
             locals.AddRange(ToLocals(t, localsStructures));

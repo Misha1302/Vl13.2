@@ -1,7 +1,5 @@
 ﻿namespace Vl13._2;
 
-using System.Reflection;
-
 public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
 {
     public Dictionary<string, LocalInfo> LocalsList = new();
@@ -36,9 +34,11 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         SetLabel(whileEnd);
     }
 
-    public void AddLocal(LocalInfo li)
+    public void AddLocal(Mli li)
     {
-        LocalsList.Add(li.Name, li);
+        var lis = Module.ToInfos([li], _localsStructures);
+        foreach (var l in lis)
+            LocalsList.Add(l.Name, l);
     }
 
     public void SetLocal(string locName, Action? value, bool canSetByRef = true)
@@ -266,9 +266,9 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var rsp = Guid.NewGuid().ToString();
         var rbp = Guid.NewGuid().ToString();
 
-        AddLocal(new LocalInfo(AsmType.I64, address));
-        AddLocal(new LocalInfo(AsmType.I64, rsp));
-        AddLocal(new LocalInfo(AsmType.I64, rbp));
+        AddLocal(new Mli("I64", address));
+        AddLocal(new Mli("I64", rsp));
+        AddLocal(new Mli("I64", rbp));
 
         LocAddress(address);
         LocAddress(rsp);

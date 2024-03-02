@@ -61,6 +61,42 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+    public override None VisitVarDecl(GrammarParser.VarDeclContext context)
+    {
+        _curFunc.AddLocal(
+            new ModuleLocalInfo(
+                context.type().IDENTIFIER().GetText(),
+                context.IDENTIFIER().GetText(),
+                context.type().ampersand() != null
+            )
+        );
+
+        return Nothing;
+    }
+
+    public override None VisitVarSet(GrammarParser.VarSetContext context)
+    {
+        string locName;
+        if (context.varDecl() != null)
+        {
+            Visit(context.varDecl());
+            locName = context.varDecl().IDENTIFIER().GetText();
+        }
+        else
+        {
+            locName = context.IDENTIFIER().GetText();
+        }
+
+        _curFunc.SetLocal(locName, () => Visit(context.expression()));
+        return Nothing;
+    }
+
+    public override None VisitIdentifierExpr(GrammarParser.IdentifierExprContext context)
+    {
+        _curFunc.GetLocal(context.IDENTIFIER().GetText());
+        return Nothing;
+    }
+
     public override None VisitIntExpr(GrammarParser.IntExprContext context)
     {
         _curFunc.PushI(TextToType.ToInt(context.INT().GetText()));
