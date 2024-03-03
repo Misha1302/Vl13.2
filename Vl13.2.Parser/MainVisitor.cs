@@ -124,7 +124,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
             locName = context.IDENTIFIER().GetText();
         }
 
+        _exprLevel++;
         Visit(context.expression());
+        _exprLevel--;
+        
         if (_curFunc.LocalsList.ContainsKey(locName)) _curFunc.SetLocal(locName);
         else _curFunc.StoreDataToLabel(locName);
 

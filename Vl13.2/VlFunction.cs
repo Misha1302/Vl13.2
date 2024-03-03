@@ -173,10 +173,25 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Le:
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LeI)));
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.LeF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Gt:
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.GtI)));
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.GtF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Ge:
+                if (module.StackManager.GetTypeInTop() == AsmType.I64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.GeI)));
+                else if (module.StackManager.GetTypeInTop() == AsmType.F64)
+                    _callManager.Call(ReflectionManager.Get(typeof(VlRuntimeHelper), nameof(VlRuntimeHelper.GeF)));
+                else Thrower.Throw(new InvalidOperationException("Invalid type"));
                 break;
             case OpType.Br:
                 module.Assembler.jmp(module.LabelsManager.GetOrAddLabel(op.Arg<string>(0)).Label);

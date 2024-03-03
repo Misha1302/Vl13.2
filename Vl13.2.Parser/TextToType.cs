@@ -4,8 +4,8 @@ using System.Globalization;
 
 public static class TextToType
 {
-    public static long ToInt(string s) => int.Parse(s);
+    public static long ToInt(string s) => int.Parse(s.Replace("_", ""));
 
     public static double ToDouble(string getText) =>
-        double.Parse(getText, NumberStyles.Any, CultureInfo.InvariantCulture);
+        double.Parse(getText.Replace("_", ""), NumberStyles.Any, CultureInfo.InvariantCulture);
 }

@@ -8,22 +8,23 @@ public static class Text
         include 'main'
 
         func main -> none {
-            x : f64 = 1.0
+            x : i64 = 0
+            
+            startTime : i64 = Vl13._2.VlRuntimeHelper.Time()
         
             label loop
-            
-            changeLocal(&x)
-            
-            System.Console.WriteLine.f64(
-                if x % 3.0 == 0.0 { 1000000000.0 }
-                else if x % 3.0 == 1.0 { 2000000000.0 }
-                else { x % 3.0 }
-            )
-            
-            
-            if x < 100.0 {
-                jmp loop
+            if x >= 1_000_000_000 {
+                jmp end
             }
+                
+            // System.Console.WriteLine.i64(x)
+        
+            x = x + 1
+            jmp loop
+            
+            label end
+            
+            System.Console.WriteLine.i64(Vl13._2.VlRuntimeHelper.Time() - startTime)
         }
 
         func changeLocal x : &f64 -> none {

@@ -52,8 +52,8 @@ MINUS: '-';
 
 IDENTIFIER: [a-zA-Z_][a-zA-Z_0-9.]*;
 STRING: ('\'' (('\\\'')|.)*? '\'') | ('"' (('\\"')|.)*? '"');
-FLOAT: '-'?[0-9]*[.][0-9]+;
-INT: '-'?[0-9]+;
+FLOAT: '-'?[0-9_]*[.][0-9_]+;
+INT: '-'?[0-9_]+;
 
 NEWLINE: [\r\n] -> skip;
 WHITESPACES: [ \t\n\r] -> skip;

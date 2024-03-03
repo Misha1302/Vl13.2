@@ -18,6 +18,15 @@ public static class VlRuntimeHelper
     public static long LtI(long a, long b) => a < b ? 1 : 0;
     public static long LtF(double a, double b) => a < b ? 1 : 0;
 
+    public static long GtI(long a, long b) => a > b ? 1 : 0;
+    public static long GtF(double a, double b) => a > b ? 1 : 0;
+
+    public static long GeI(long a, long b) => a >= b ? 1 : 0;
+    public static long GeF(double a, double b) => a >= b ? 1 : 0;
+
+    public static long LeI(long a, long b) => a < b ? 1 : 0;
+    public static long LeF(double a, double b) => a < b ? 1 : 0;
+
     private static bool AreEqualRel(double a, double b, double epsilon) =>
         Math.Abs(a - b) <= epsilon * Math.Max(Math.Abs(a), Math.Abs(b));
 
@@ -62,4 +71,6 @@ public static class VlRuntimeHelper
         (*(long*)(void*)addressPtr, *(long*)(void*)rspPtr, *(long*)(void*)rbpPtr) = _stack.Pop();
 
     public static void DropAddress() => _stack.Pop();
+
+    public static long Time() => DateTimeOffset.Now.ToUnixTimeMilliseconds();
 }
