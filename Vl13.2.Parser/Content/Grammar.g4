@@ -1,7 +1,7 @@
 ﻿grammar Grammar;
 
 program: line* EOF;
-line: NEWLINE* (include | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
+line: NEWLINE* (include | label | jmp | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
 
 include: 'include' STRING;
 
@@ -18,6 +18,9 @@ varSet: (IDENTIFIER | varDecl) '=' expression;
 structDecl: 'struct' IDENTIFIER (varDecl (',' varDecl)*);
 
 ampersand: '&';
+
+label: 'label' IDENTIFIER;
+jmp: 'jmp' IDENTIFIER;
 
 expression:
     IDENTIFIER                                                                                          #identifierExpr

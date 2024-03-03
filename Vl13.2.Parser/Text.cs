@@ -7,18 +7,20 @@ public static class Text
     public static readonly string SimpleProgram =
         """
         include 'main'
-        
-        global globalVar : f64
 
         func main -> none {
-            ptr : i64 = &muls
-            globalVar = 3.1415
+            x : f64 = 1.0
+        
+            label loop
             
-            System.Console.WriteLine.f64(ptr<f64, f64, f64>(23.32, -43.32)) // -3173.6136696
+            changeLocal(&x)
+            System.Console.WriteLine.f64(x)
+            
+            jmp loop
         }
 
-        func muls x : f64, y : f64 -> f64 {
-            ret x * y * globalVar
+        func changeLocal x : &f64 -> none {
+            x = x * 1.001
         }
         """;
 

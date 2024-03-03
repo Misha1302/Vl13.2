@@ -5,14 +5,18 @@ using Antlr4.Runtime.Tree;
 using Vl13._2.Parser.Content;
 using static None;
 
+// ReSharper disable ConvertToConstant.Local
 public class MainVisitor : GrammarBaseVisitor<None>
 {
     private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
-    private AsmFunctionBuilder _curFunc = null!;
-    private PreVisitor _preVisitor = null!; // ReSharper disable ConvertToConstant.Local
     private readonly string _returnAddress = "returnValue<>";
     private readonly string _noneType = "none";
+
+    private AsmFunctionBuilder _curFunc = null!;
+    private PreVisitor _preVisitor = null!;
+
+    private int _exprLevel;
 
     public override None Visit(IParseTree tree)
     {
@@ -94,10 +98,22 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+    public override None VisitLabel(GrammarParser.LabelContext context)
+    {
+        _curFunc.SetLabel(context.IDENTIFIER().GetText());
+        return Nothing;
+    }
+
+    public override None VisitJmp(GrammarParser.JmpContext context)
+    {
+        _curFunc.Br(context.IDENTIFIER().GetText());
+        return Nothing;
+    }
+
     public override None VisitVarSet(GrammarParser.VarSetContext context)
     {
         string locName;
-        
+
         if (context.varDecl() != null)
         {
             Visit(context.varDecl());
@@ -117,8 +133,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitSumSubExpr(GrammarParser.SumSubExprContext context)
     {
+        _exprLevel++;
         foreach (var expr in context.expression())
             Visit(expr);
+        _exprLevel--;
 
         if (context.PLUS() != null) _curFunc.Add();
         else if (context.MINUS() != null) _curFunc.Sub();
@@ -128,8 +146,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitMulDivModExpr(GrammarParser.MulDivModExprContext context)
     {
+        _exprLevel++;
         foreach (var expr in context.expression())
             Visit(expr);
+        _exprLevel--;
 
         if (context.STAR() != null) _curFunc.Mul();
         else if (context.DIV() != null) _curFunc.Div();
@@ -193,12 +213,14 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var fName = context.expression(0).GetText();
 
+        _exprLevel++;
         foreach (var e in context.expression().Skip(1).Reverse())
             Visit(e);
+        _exprLevel--;
 
         Action a =
             ReflectionManager.Methods.TryGetValue(fName, out var tuple)
-                ? () => _curFunc.CallSharp(tuple)
+                ? () => CallSharp(tuple)
                 : fName switch
                 {
                     "f64Toi64" => _curFunc.F64ToI64,
@@ -215,6 +237,14 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         return Nothing;
 
+
+        void CallSharp((MethodInfo mi, nint ptr) value)
+        {
+            _curFunc.CallSharp(value);
+            if (_exprLevel == 0)
+                _curFunc.Drop();
+        }
+
         void CallFunc()
         {
             var returnType = _preVisitor.Functions[fName].returnType;
@@ -229,7 +259,8 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
             _curFunc.CallFunc(fName);
 
-            if (isNotNone) _curFunc.GetLocal(returnValueLocalName);
+            if (_exprLevel != 0 && isNotNone)
+                _curFunc.GetLocal(returnValueLocalName);
         }
     }
 
@@ -239,8 +270,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
         var isNotNone = returnType != _noneType;
         var returnValueLocalName = Guid.NewGuid().ToString();
 
+        _exprLevel++;
         foreach (var e in context.expression().Skip(1).Reverse())
             Visit(e);
+        _exprLevel--;
 
         if (isNotNone)
         {
@@ -259,7 +292,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
         Visit(context.expression(0));
         _curFunc.CallAddress(types);
 
-        if (isNotNone)
+        if (_exprLevel != 0 && isNotNone)
             _curFunc.GetLocal(returnValueLocalName);
 
         return Nothing;
