@@ -8,27 +8,37 @@ public static class Text
         include 'main'
 
         func main -> none {
-            x : i64 = 0
-            
             startTime : i64 = Vl13._2.VlRuntimeHelper.Time()
         
-            label loop
-            if x >= 1_000_000_000 {
-                jmp end
-            }
-                
-            // System.Console.WriteLine.i64(x)
-        
-            x = x + 1
-            jmp loop
+            q : f64 = sqrt(5.0)
+            System.Console.WriteLine.f64(q)
+            System.Console.WriteLine.f64(q * q)
             
-            label end
+            q = sqrtRec(5.0, 5.0)
+            System.Console.WriteLine.f64(q)
+            System.Console.WriteLine.f64(q * q)
             
             System.Console.WriteLine.i64(Vl13._2.VlRuntimeHelper.Time() - startTime)
         }
 
-        func changeLocal x : &f64 -> none {
-            x = x + 0.25
+        func sqrt x : f64 -> f64 {
+            result : f64 = x
+        
+            label l
+            
+            result = 0.5 * (result + (x / result))
+            if result * result - x < 0.000000000000001 {
+                ret result
+            }
+            
+            jmp l
+        }
+
+        func sqrtRec a : f64, x : f64 -> f64 {
+            if x * x - a < 0.000000000000001 {
+                ret x
+            }
+            ret sqrtRec(a, 0.5 * (x + (a / x)))
         }
         """;
 

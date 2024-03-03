@@ -206,7 +206,11 @@ public class MainVisitor : GrammarBaseVisitor<None>
     public override None VisitRet(GrammarParser.RetContext context)
     {
         if (context.expression() != null)
+        {
+            _exprLevel++;
             _curFunc.SetLocal(_returnAddress, () => Visit(context.expression()));
+            _exprLevel--;
+        }
 
         _curFunc.Ret();
         return Nothing;
