@@ -298,6 +298,62 @@ public class MainVisitor : GrammarBaseVisitor<None>
         return Nothing;
     }
 
+    public override None VisitIf(GrammarParser.IfContext context)
+    {
+        _curFunc.Condition(() =>
+            {
+                _exprLevel++;
+                Visit(context.expression());
+                _exprLevel--;
+            },
+            () => Visit(context.block()),
+            () =>
+            {
+                if (context.@else() != null)
+                    Visit(context.@else());
+            }
+        );
+
+        return Nothing;
+    }
+
+    public override None VisitElse(GrammarParser.ElseContext context)
+    {
+        if (context.@if() != null)
+            Visit(context.@if());
+        else Visit(context.block());
+
+        return Nothing;
+    }
+
+    public override None VisitCmpExpr(GrammarParser.CmpExprContext context)
+    {
+        _exprLevel++;
+        foreach (var e in context.expression())
+            Visit(e);
+        _exprLevel--;
+
+        if (context.LT() != null) _curFunc.Lt();
+        else if (context.LE() != null) _curFunc.Le();
+        else if (context.GT() != null) _curFunc.Gt();
+        else if (context.GE() != null) _curFunc.Ge();
+
+        return Nothing;
+    }
+
+    public override None VisitEqExpr(GrammarParser.EqExprContext context)
+    {
+        _exprLevel++;
+        foreach (var e in context.expression())
+            Visit(e);
+        _exprLevel--;
+
+        if (context.EQ() != null) _curFunc.Eq();
+        else if (context.NEQ() != null) _curFunc.Neq();
+
+        return Nothing;
+    }
+
     private static string TypesToString(ParameterInfo[] parameters)
     {
         return string.Join("", parameters.Select(x =>

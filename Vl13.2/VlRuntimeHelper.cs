@@ -10,10 +10,10 @@ public static class VlRuntimeHelper
         (Math.Abs(a) - Math.Abs(b) * Math.Floor(Math.Abs(a) / Math.Abs(b))) * Math.Sign(a);
 
     public static long NeqI(long a, long b) => EqI(a, b) == 1 ? 0 : 1;
-    public static long NeqF(float a, float b) => EqF(a, b) == 1 ? 0 : 1;
+    public static long NeqF(double a, double b) => EqF(a, b) == 1 ? 0 : 1;
 
     public static long EqI(long a, long b) => a == b ? 1 : 0;
-    public static long EqF(float a, float b) => AreEqualRel(a, b, 0.0001) ? 1 : 0;
+    public static long EqF(double a, double b) => AreEqualRel(a, b, 0.0001) ? 1 : 0;
 
     public static long LtI(long a, long b) => a < b ? 1 : 0;
     public static long LtF(double a, double b) => a < b ? 1 : 0;

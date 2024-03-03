@@ -204,7 +204,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     public void Condition(Action cond, Action ifBlock, Action elseBlock)
     {
         var endLbl = GenerateLabelName("endCond");
-        var elseLbl = GenerateLabelName("endCond");
+        var elseLbl = GenerateLabelName("elseCond");
 
         cond();
         BrZero(elseLbl);

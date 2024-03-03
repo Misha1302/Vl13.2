@@ -1,7 +1,7 @@
 ﻿grammar Grammar;
 
 program: line* EOF;
-line: NEWLINE* (include | label | jmp | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
+line: NEWLINE* (include | label | jmp | if | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
 
 include: 'include' STRING;
 
@@ -22,6 +22,9 @@ ampersand: '&';
 label: 'label' IDENTIFIER;
 jmp: 'jmp' IDENTIFIER;
 
+if: 'if' expression block else?;
+else: 'else' (if | block);
+
 expression:
     IDENTIFIER                                                                                          #identifierExpr
     | INT                                                                                               #intExpr
@@ -33,7 +36,13 @@ expression:
     | expression '(' (expression (',' expression)*)? ')'                                                #callExpr
     | expression '<' type (',' type)* '>' '(' (expression (',' expression)*)? ')'                       #addressCallExpr
     | '(' expression ')'                                                                                #parentsExpr
+    | expression (LT | LE | GT | GE) expression                                                         #cmpExpr
+    | expression (EQ | NEQ) expression                                                                  #eqExpr
+    | if                                                                                                #ifExpr
     ;
+
+LT: '<'; LE: '<='; GT: '>'; GE: '>=';
+EQ: '=='; NEQ: '!=';
 
 STAR: '*';
 DIV: '/';
@@ -46,6 +55,6 @@ STRING: ('\'' (('\\\'')|.)*? '\'') | ('"' (('\\"')|.)*? '"');
 FLOAT: '-'?[0-9]*[.][0-9]+;
 INT: '-'?[0-9]+;
 
-NEWLINE: [\r\n];
+NEWLINE: [\r\n] -> skip;
 WHITESPACES: [ \t\n\r] -> skip;
 SINGLELINECOMMENTS: '//' ~('\r' | '\n')* -> skip;
