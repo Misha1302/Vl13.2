@@ -1,12 +1,13 @@
 ﻿grammar Grammar;
 
 program: line* EOF;
-line: NEWLINE* (include | expression | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
+line: NEWLINE* (include | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
 
 include: 'include' STRING;
 
 varDecl: IDENTIFIER ':' type;
 functionDecl: 'func' IDENTIFIER (varDecl (',' varDecl)*)? '->' type block;
+globalDecl: 'global' varDecl;
 
 block: '{' line* '}';
 type: ampersand? IDENTIFIER;
@@ -39,7 +40,7 @@ MINUS: '-';
 
 IDENTIFIER: [a-zA-Z_][a-zA-Z_0-9.]*;
 STRING: ('\'' (('\\\'')|.)*? '\'') | ('"' (('\\"')|.)*? '"');
-FLOAT: [0-9]*[.][0-9]+;
+FLOAT: '-'?[0-9]*[.][0-9]+;
 INT: '-'?[0-9]+;
 
 NEWLINE: [\r\n];

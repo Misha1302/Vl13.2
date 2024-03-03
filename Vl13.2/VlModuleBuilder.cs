@@ -5,25 +5,22 @@ public class VlModuleBuilder
     private readonly List<VlImageInfo> _imageInfos = [];
     private readonly Dictionary<string, Dictionary<string, AsmType>> _structures = new();
 
-    public readonly Dictionary<string, LocalInfo> Globals;
+    public readonly Dictionary<string, LocalInfo> Globals = new();
     public readonly Dictionary<string, string> GlobalsOfStructureTypes = new();
 
     public VlModuleBuilder(params Mli[] globals)
     {
-        Globals = ToDict(globals);
+        AddGlobals(globals);
         CreateBuildinFunctions();
     }
 
     public IReadOnlyDictionary<string, Dictionary<string, AsmType>> Structures => _structures;
 
-    private Dictionary<string, LocalInfo> ToDict(Mli[] globals)
+    public void AddGlobals(Mli[] globals)
     {
-        var dictionary = new Dictionary<string, LocalInfo>();
-
         foreach (var info in globals)
             foreach (var loc in ToLocals(info, GlobalsOfStructureTypes))
-                dictionary.Add(info.Name, loc);
-        return dictionary;
+                Globals.Add(info.Name, loc);
     }
 
     public List<VlImageInfo> Compile()

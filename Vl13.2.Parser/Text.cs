@@ -7,15 +7,18 @@ public static class Text
     public static readonly string SimpleProgram =
         """
         include 'main'
+        
+        global globalVar : f64
 
         func main -> none {
-            ptr : i64 = &square
+            ptr : i64 = &muls
+            globalVar = 3.1415
             
-            System.Console.WriteLine.i64(ptr<i64, i64, i64>(23, -43)) // -989
+            System.Console.WriteLine.f64(ptr<f64, f64, f64>(23.32, -43.32)) // -3173.6136696
         }
 
-        func square x : i64, y : i64 -> i64 {
-            ret x * y
+        func muls x : f64, y : f64 -> f64 {
+            ret x * y * globalVar
         }
         """;
 

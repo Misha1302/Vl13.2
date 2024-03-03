@@ -41,7 +41,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
             LocalsList.Add(l.Name, l);
     }
 
-    public void SetLocal(string locName, Action? value, bool canSetByRef = true)
+    public void SetLocal(string locName, Action? value = null, bool canSetByRef = true)
     {
         value?.Invoke();
 
@@ -60,7 +60,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     Store64();
                 }
             },
-            fieldName => SetLocal($"{locName}_{fieldName}", null),
+            fieldName => SetLocal($"{locName}_{fieldName}"),
             true
         );
     }
