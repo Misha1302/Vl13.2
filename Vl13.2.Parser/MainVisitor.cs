@@ -127,7 +127,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
         _exprLevel++;
         Visit(context.expression());
         _exprLevel--;
-        
+
         if (_curFunc.LocalsList.ContainsKey(locName)) _curFunc.SetLocal(locName);
         else _curFunc.StoreDataToLabel(locName);
 
@@ -213,6 +213,28 @@ public class MainVisitor : GrammarBaseVisitor<None>
         }
 
         _curFunc.Ret();
+        return Nothing;
+    }
+
+    public override None VisitWhile(GrammarParser.WhileContext context)
+    {
+        _curFunc.While(
+            () => Visit(context.expression()),
+            () => Visit(context.block())
+        );
+
+        return Nothing;
+    }
+
+    public override None VisitFor(GrammarParser.ForContext context)
+    {
+        _curFunc.For(
+            () => Visit(context.line(0)),
+            () => Visit(context.line(1)),
+            () => Visit(context.line(2)),
+            () => Visit(context.block())
+        );
+
         return Nothing;
     }
 

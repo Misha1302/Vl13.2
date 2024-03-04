@@ -1,7 +1,7 @@
 ﻿grammar Grammar;
 
 program: line* EOF;
-line: NEWLINE* (include | label | jmp | if | expression | globalDecl | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE | ';')+ NEWLINE*;
+line: NEWLINE* (include | label | jmp | if | expression | globalDecl | for | while | functionDecl | structDecl | varDecl | ret | varSet | NEWLINE) ';'? NEWLINE*;
 
 include: 'include' STRING;
 
@@ -9,7 +9,7 @@ varDecl: IDENTIFIER ':' type;
 functionDecl: 'func' IDENTIFIER (varDecl (',' varDecl)*)? '->' type block;
 globalDecl: 'global' varDecl;
 
-block: '{' line* '}';
+block: ('=>' line) | ('{' line* '}');
 type: ampersand? IDENTIFIER;
 ret: 'ret' expression?;
 
@@ -24,6 +24,8 @@ jmp: 'jmp' IDENTIFIER;
 
 if: 'if' expression block else?;
 else: 'else' (if | block);
+while: 'while' expression block;
+for: 'for' line line line block;
 
 expression:
     IDENTIFIER                                                                                          #identifierExpr

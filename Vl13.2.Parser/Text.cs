@@ -10,13 +10,18 @@ public static class Text
         func main -> none {
             startTime : i64 = Vl13._2.VlRuntimeHelper.Time()
         
-            q : f64 = sqrt(5.0)
-            System.Console.WriteLine.f64(q)
-            System.Console.WriteLine.f64(q * q)
-            
-            q = sqrtRec(5.0, 5.0)
-            System.Console.WriteLine.f64(q)
-            System.Console.WriteLine.f64(q * q)
+            for i : f64 = 0.0; i < 10.01; i = i + 1.0 {
+                q : f64 = sqrt(i)
+                System.Console.WriteLine.f64(q)
+                System.Console.WriteLine.f64(q * q)
+                
+                q = sqrtRec(i, i)
+                System.Console.WriteLine.f64(q)
+                System.Console.WriteLine.f64(q * q)
+                
+                System.Console.WriteLine()
+                System.Console.WriteLine()
+            }
             
             System.Console.WriteLine.i64(Vl13._2.VlRuntimeHelper.Time() - startTime)
         }
@@ -24,21 +29,17 @@ public static class Text
         func sqrt x : f64 -> f64 {
             result : f64 = x
         
-            label l
-            
-            result = 0.5 * (result + (x / result))
-            if result * result - x < 0.000000000000001 {
-                ret result
-            }
-            
-            jmp l
+            while result * result - x >= 0.000000000000001 =>
+                result = 0.5 * (result + (x / result))
+                
+            ret result
         }
 
         func sqrtRec a : f64, x : f64 -> f64 {
-            if x * x - a < 0.000000000000001 {
+            if x * x - a < 0.000000000000001 => 
                 ret x
-            }
-            ret sqrtRec(a, 0.5 * (x + (a / x)))
+            
+            ret sqrtRec(a, 0.5 * (x + (a / x))) 
         }
         """;
 
