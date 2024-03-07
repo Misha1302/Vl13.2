@@ -10,7 +10,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 {
     private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
-    private readonly string _noneType = "NONE";
+    private readonly StringType _noneType = new("NONE");
 
     private AsmFunctionBuilder _curFunc = null!;
     private PreVisitor _preVisitor = null!;
@@ -36,20 +36,19 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var args = context.varDecl().Select(x =>
             new ModuleLocalInfo(
-                x.type().IDENTIFIER().GetText(),
+                new StringType(x.type().IDENTIFIER().GetText()),
                 x.IDENTIFIER().GetText(),
                 x.type().ampersand() != null
             )
         ).ToArray();
-#warning
 
-        var retType = context.type().GetText().ToUpper();
+        var retType = new StringType(context.type().GetText());
         var returnValues = Array.Empty<ModuleLocalInfo>();
         if (retType != _noneType)
         {
             var countArgs = !Module.Structures.ContainsKey(retType) ? 1 : Module.Structures[retType].Count;
             returnValues = Enumerable.Range(0, countArgs)
-                .Select(x => new ModuleLocalInfo("I64", ReturnAddress(x), true)).ToArray();
+                .Select(x => new ModuleLocalInfo(new StringType("I64"), ReturnAddress(x), true)).ToArray();
         }
 
         _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), returnValues, args, []);
@@ -73,9 +72,14 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         Func<Type, MethodInfo, string> makeAlias = (type, info) =>
         {
-            var types = TypesToString(info.GetParameters());
-            var s = $"{type.Namespace}.{type.Name}.{info.Name}";
-            return types.Length != 0 ? $"{s}.{types}" : s;
+            var types = TextToType.TypeToShortString(info.GetParameters());
+
+            var s = "";
+            if (!string.IsNullOrEmpty(type.Namespace)) s += type.Namespace + ".";
+            s += $"{type.Name}.{info.Name}";
+            if (types.Length != 0) s += $".{types}";
+
+            return s;
         };
 
         if (path == "main")
@@ -97,7 +101,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         _curFunc.AddLocal(
             new ModuleLocalInfo(
-                context.type().IDENTIFIER().GetText(),
+                new StringType(context.type().IDENTIFIER().GetText()),
                 context.IDENTIFIER().GetText(),
                 context.type().ampersand() != null
             )
@@ -201,7 +205,8 @@ public class MainVisitor : GrammarBaseVisitor<None>
     public override None VisitGlobalDecl(GrammarParser.GlobalDeclContext context)
     {
         Module.AddGlobals([
-            new ModuleLocalInfo(context.varDecl().type().GetText(), context.varDecl().IDENTIFIER().GetText())
+            new ModuleLocalInfo(new StringType(context.varDecl().type().GetText()),
+                context.varDecl().IDENTIFIER().GetText())
         ]);
         return Nothing;
     }
@@ -315,7 +320,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitAddressCallExpr(GrammarParser.AddressCallExprContext context)
     {
-        var returnType = context.type()[^1].GetText().ToUpper();
+        var returnType = new StringType(context.type()[^1].GetText());
         var isNotNone = returnType != _noneType;
         var returnValueLocalName = Guid.NewGuid().ToString();
 
@@ -333,15 +338,19 @@ public class MainVisitor : GrammarBaseVisitor<None>
         var typeContexts = context.type();
 
         var types = typeContexts.Select(
-            (t, index) => isNotNone && index == 0
-                ? "I64"
-                : t.GetText()
+            (t, index) =>
+                new StringType(
+                    isNotNone && index == 0
+                        ? "I64"
+                        : t.GetText()
+                )
         ).ToArray();
 
         Visit(context.expression(0));
-        _curFunc.CallAddress(types[^1].Equals(_noneType, StringComparison.CurrentCultureIgnoreCase)
+        _curFunc.CallAddress(types[^1] == _noneType
             ? types[..^1]
-            : types);
+            : types
+        );
 
         if (_exprLevel != 0 && isNotNone)
             _curFunc.GetLocal(returnValueLocalName);
@@ -403,16 +412,5 @@ public class MainVisitor : GrammarBaseVisitor<None>
         else if (context.NEQ() != null) _curFunc.Neq();
 
         return Nothing;
-    }
-
-    private static string TypesToString(ParameterInfo[] parameters)
-    {
-        return string.Join("", parameters.Select(x =>
-            x.ParameterType == typeof(long) ? "i64" :
-            x.ParameterType == typeof(int) ? "i32" :
-            x.ParameterType == typeof(double) ? "f64" :
-            x.ParameterType == typeof(bool) ? "i8" :
-            Thrower.Throw<string>(new InvalidOperationException("Unknown type"))
-        ));
     }
 }

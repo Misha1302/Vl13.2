@@ -4,14 +4,14 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     : VlImageInfo(Name, ArgTypes)
 {
     private Dictionary<string, LocalInfo> _localsList = new();
-    private Dictionary<string, string> _localsStructures = new();
+    private Dictionary<string, StringType> _localsStructures = new();
 
     public void Write(Type valueType) => CallSharp(typeof(Console), nameof(Console.Write), [valueType]);
 
     public void WriteLine(Type? valueType) =>
         CallSharp(typeof(Console), nameof(Console.WriteLine), valueType == null ? [] : [valueType]);
 
-    public void DeclareLocals(IEnumerable<LocalInfo> localInfos, Dictionary<string, string> localsStructures)
+    public void DeclareLocals(IEnumerable<LocalInfo> localInfos, Dictionary<string, StringType> localsStructures)
     {
         _localsList = localInfos.ToDictionary(x => x.Name, x => x);
         _localsStructures = localsStructures;
@@ -238,24 +238,22 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         );
     }
 
-    public void CallAddress(string[] args)
+    public void CallAddress(StringType[] args)
     {
         base.CallAddress(ToTypes(args));
     }
 
-    private AsmType[] ToTypes(string[] args)
+    private AsmType[] ToTypes(StringType[] args)
     {
         var list = new List<AsmType>();
 
-        foreach (var arg in args.Select(x => x.ToUpper()))
-            if (!Module.Structures.TryGetValue(arg.Replace("&", ""), out var value))
-                list.Add(IsByRef(arg) ? AsmType.I64 : Enum.Parse<AsmType>(arg));
+        foreach (var arg in args)
+            if (!Module.Structures.TryGetValue(new StringType(arg.Type.Replace("&", "")), out var value))
+                list.Add(arg.IsByRef ? AsmType.I64 : Enum.Parse<AsmType>(arg.Type));
             else
-                list.AddRange(value.Select(x => !IsByRef(arg) ? x.Value : AsmType.I64));
+                list.AddRange(value.Select(x => !arg.IsByRef ? x.Value : AsmType.I64));
 
         return list.ToArray();
-
-        bool IsByRef(string type) => type.StartsWith('&');
     }
 
     public void DropCatch()
@@ -270,9 +268,9 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var rsp = Guid.NewGuid().ToString();
         var rbp = Guid.NewGuid().ToString();
 
-        AddLocal(new Mli("I64", address));
-        AddLocal(new Mli("I64", rsp));
-        AddLocal(new Mli("I64", rbp));
+        AddLocal(new Mli(new StringType("I64"), address));
+        AddLocal(new Mli(new StringType("I64"), rsp));
+        AddLocal(new Mli(new StringType("I64"), rbp));
 
         LocAddress(address);
         LocAddress(rsp);
