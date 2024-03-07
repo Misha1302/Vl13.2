@@ -1,8 +1,9 @@
 ﻿namespace Vl13._2;
 
-public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes) : VlImageInfo(Name, ArgTypes)
+public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes, int ReturnsCount)
+    : VlImageInfo(Name, ArgTypes)
 {
-    public Dictionary<string, LocalInfo> LocalsList = new();
+    private Dictionary<string, LocalInfo> _localsList = new();
     private Dictionary<string, string> _localsStructures = new();
 
     public void Write(Type valueType) => CallSharp(typeof(Console), nameof(Console.Write), [valueType]);
@@ -12,7 +13,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void DeclareLocals(IEnumerable<LocalInfo> localInfos, Dictionary<string, string> localsStructures)
     {
-        LocalsList = localInfos.ToDictionary(x => x.Name, x => x);
+        _localsList = localInfos.ToDictionary(x => x.Name, x => x);
         _localsStructures = localsStructures;
     }
 
@@ -38,7 +39,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     {
         var lis = Module.ToInfos([li], _localsStructures);
         foreach (var l in lis)
-            LocalsList.Add(l.Name, l);
+            _localsList.Add(l.Name, l);
     }
 
     public void SetLocal(string locName, Action? value = null, bool canSetByRef = true)
@@ -60,7 +61,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     Store64();
                 }
             },
-            fieldName => SetLocal($"{locName}_{fieldName}"),
+            fieldName => SetLocal(MakeFieldName(locName, fieldName)),
             true
         );
     }
@@ -81,7 +82,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     Load64();
                 }
             },
-            name => GetLocal($"{locName}_{name}"),
+            name => GetLocal(MakeFieldName(locName, name)),
             false
         );
     }
@@ -105,7 +106,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
                     () => GetLocal(locName),
                     () =>
                     {
-                        if (LocalsList[locName].Type == AsmType.I64)
+                        if (_localsList[locName].Type == AsmType.I64)
                             PushI(1);
                         else PushF(1.0);
                     }
@@ -139,22 +140,22 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void SetField(string structName, string fieldName, Action action)
     {
-        SetLocal($"{structName}_{fieldName}", action);
+        SetLocal($"{structName}.{fieldName}", action);
     }
 
     public void IncField(string structName, string fieldName)
     {
-        IncLoc($"{structName}_{fieldName}");
+        IncLoc($"{structName}.{fieldName}");
     }
 
     public void GetField(string structName, string fieldName)
     {
-        GetLocal($"{structName}_{fieldName}");
+        GetLocal(MakeFieldName(structName, fieldName));
     }
 
     public void FieldAddress(string structName, string fieldName)
     {
-        LocAddress($"{structName}_{fieldName}");
+        LocAddress(MakeFieldName(structName, fieldName));
     }
 
     public void LocAddress(string locName)
@@ -175,7 +176,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
     )
     {
         if (!_localsStructures.TryGetValue(locName, out var type))
-            loc(LocalsList[locName]);
+            loc(_localsList[locName]);
         else if (reverse)
             foreach (var pair in Module.Structures[type].Reverse())
                 structure(pair.Key);
@@ -222,7 +223,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         OpGlobal(
             name,
             _ => LoadDataFromLabel(name, Module.Globals[name].Type),
-            field => LoadDataFromLabel($"{name}_{field}"),
+            field => LoadDataFromLabel(MakeFieldName(name, field)),
             false
         );
     }
@@ -232,7 +233,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         OpGlobal(
             name,
             _ => base.StoreDataToLabel(name),
-            field => base.StoreDataToLabel($"{name}_{field}"),
+            field => base.StoreDataToLabel(MakeFieldName(name, field)),
             true
         );
     }
@@ -303,4 +304,8 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
         SetLabel(tryCatchEndName);
     }
+
+    public static string MakeFieldName(string structName, string fldName) => $"{structName}.{fldName}";
+
+    public bool HasLocal(string locName) => _localsList.ContainsKey(locName) || _localsStructures.ContainsKey(locName);
 }

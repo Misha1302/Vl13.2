@@ -6,40 +6,30 @@ public static class Text
     public static readonly string SimpleProgram =
         """
         include 'main'
+        
+        struct Vector3 x : i64, y : i64, z : i64, print : i64, add : i64
 
         func main -> none {
-            startTime : i64 = Vl13._2.VlRuntimeHelper.Time()
+            a : Vector3 = createVector()
         
-            for i : f64 = 0.0; i < 10.01; i = i + 1.0 {
-                q : f64 = sqrt(i)
-                System.Console.WriteLine.f64(q)
-                System.Console.WriteLine.f64(q * q)
-                
-                q = sqrtRec(i, i)
-                System.Console.WriteLine.f64(q)
-                System.Console.WriteLine.f64(q * q)
-                
-                System.Console.WriteLine()
-                System.Console.WriteLine()
-            }
-            
-            System.Console.WriteLine.i64(Vl13._2.VlRuntimeHelper.Time() - startTime)
+            System.Console.WriteLine.i64(a.x)
+            System.Console.WriteLine.i64(a.y)
+            System.Console.WriteLine.i64(a.z)
+            System.Console.WriteLine.i64(a.print)
+            System.Console.WriteLine.i64(a.add)
         }
-
-        func sqrt x : f64 -> f64 {
-            result : f64 = x
         
-            while result * result - x >= 0.000000000000001 =>
-                result = 0.5 * (result + (x / result))
-                
-            ret result
-        }
-
-        func sqrtRec a : f64, x : f64 -> f64 {
-            if x * x - a < 0.000000000000001 => 
-                ret x
+        func createVector -> Vector3 {
+            a : Vector3
+            a.x = 23
+            a.y = 43
+            a.z = a.x * a.y * -2
             
-            ret sqrtRec(a, 0.5 * (x + (a / x))) 
+            a.print = -111
+            a.add = -222
+        
+        
+            ret a
         }
         """;
 

@@ -60,7 +60,7 @@ public static class Program
     {
         var module = new VlModuleBuilder();
 
-        var main = module.AddFunction("main", [], [new Mli("I64", "returnValue")]);
+        var main = module.AddFunction("main", [], [new Mli("I64", "returnValue")], 0);
 
         main.CallFunc("hello", () => main.LocAddress("returnValue"));
 
@@ -70,7 +70,7 @@ public static class Program
         main.Ret();
 
 
-        var hello = module.AddFunction("hello", [new Mli("I64", "returnValue", true)], []);
+        var hello = module.AddFunction("hello", [new Mli("I64", "returnValue", true)], [], 0);
         hello.SetLocal("returnValue", () => hello.PushI(123));
         hello.Ret();
 

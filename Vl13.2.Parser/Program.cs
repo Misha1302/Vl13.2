@@ -17,6 +17,9 @@ unsafe
 
 
     var module = visitor.Module;
+    AsmExecutor.PrintCode(module);
+
+
     var translator = new VlTranslator(module.Compile());
     var debugData = new DebugData();
     var asm = translator.Translate(debugData, new TranslateData(2048, true));

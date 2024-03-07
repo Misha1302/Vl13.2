@@ -10,13 +10,14 @@ public class MainVisitor : GrammarBaseVisitor<None>
 {
     private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
-    private readonly string _returnAddress = "returnValue<>";
-    private readonly string _noneType = "none";
+    private readonly string _noneType = "NONE";
 
     private AsmFunctionBuilder _curFunc = null!;
     private PreVisitor _preVisitor = null!;
 
     private int _exprLevel;
+
+    private static string ReturnAddress(int index) => $"returnValue<{index}>";
 
     public override None Visit(IParseTree tree)
     {
@@ -41,10 +42,17 @@ public class MainVisitor : GrammarBaseVisitor<None>
             )
         ).ToArray();
 
-        if (context.type().GetText() != _noneType)
-            args = new[] { new ModuleLocalInfo("I64", _returnAddress, true) }.Union(args).ToArray();
+        var retType = context.type().GetText().ToUpper();
+        ModuleLocalInfo[]? returnValues = null;
+        if (retType != _noneType)
+        {
+            var countArgs = !Module.Structures.ContainsKey(retType) ? 1 : Module.Structures[retType].Count;
+            returnValues = Enumerable.Range(0, countArgs)
+                .Select(x => new ModuleLocalInfo("I64", ReturnAddress(x), true)).ToArray();
+            args = returnValues.Union(args).ToArray();
+        }
 
-        _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), args, []);
+        _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), args, [], returnValues?.Length ?? 0);
         Visit(context.block());
         _curFunc.Ret();
         _curFunc = null!;
@@ -128,8 +136,9 @@ public class MainVisitor : GrammarBaseVisitor<None>
         Visit(context.expression());
         _exprLevel--;
 
-        if (_curFunc.LocalsList.ContainsKey(locName)) _curFunc.SetLocal(locName);
-        else _curFunc.StoreDataToLabel(locName);
+        if (Module.HasGlobal(locName)) _curFunc.StoreDataToLabel(locName);
+        else if (_curFunc.HasLocal(locName)) _curFunc.SetLocal(locName);
+        else Thrower.Throw(new InvalidOperationException());
 
         return Nothing;
     }
@@ -171,7 +180,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     public override None VisitGetAddressExpr(GrammarParser.GetAddressExprContext context)
     {
         var name = context.IDENTIFIER().GetText();
-        if (_curFunc.LocalsList.ContainsKey(name))
+        if (_curFunc.HasLocal(name))
             _curFunc.LocAddress(name);
         else _curFunc.LabelAddress(name);
 
@@ -182,9 +191,9 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var locName = context.IDENTIFIER().GetText();
 
-        if (_curFunc.LocalsList.ContainsKey(locName))
-            _curFunc.GetLocal(locName);
-        else _curFunc.LoadDataFromLabel(locName);
+        if (Module.HasGlobal(locName)) _curFunc.LoadDataFromLabel(locName);
+        else if (_curFunc.HasLocal(locName)) _curFunc.GetLocal(locName);
+        else Thrower.Throw(new InvalidOperationException());
 
         return Nothing;
     }
@@ -208,7 +217,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
         if (context.expression() != null)
         {
             _exprLevel++;
-            _curFunc.SetLocal(_returnAddress, () => Visit(context.expression()));
+#warning
+            Visit(context.expression());
+            for (var i = 0; i < _curFunc.ReturnsCount; i++)
+                _curFunc.SetLocal(ReturnAddress(i));
             _exprLevel--;
         }
 
@@ -256,7 +268,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
                     "i64Toi32" => _curFunc.I64ToI32,
                     "i64Toi16" => _curFunc.I64ToI16,
                     "i64Toi8" => _curFunc.I64ToI8,
-                    "i8ToI64" => _curFunc.I8ToI64,
+                    "i8Toi64" => _curFunc.I8ToI64,
                     "i16Toi64" => _curFunc.I16ToI64,
                     _ => CallFunc
                 };
@@ -291,6 +303,15 @@ public class MainVisitor : GrammarBaseVisitor<None>
             if (_exprLevel != 0 && isNotNone)
                 _curFunc.GetLocal(returnValueLocalName);
         }
+    }
+
+    public override None VisitStruct(GrammarParser.StructContext context)
+    {
+        Module.AddStructure(context.IDENTIFIER().GetText(),
+            context.varDecl().Select(x => (x.type().GetText(), x.IDENTIFIER().GetText())).ToList()
+        );
+
+        return Nothing;
     }
 
     public override None VisitAddressCallExpr(GrammarParser.AddressCallExprContext context)

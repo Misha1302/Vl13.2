@@ -16,6 +16,8 @@ public class VlModuleBuilder
 
     public IReadOnlyDictionary<string, Dictionary<string, AsmType>> Structures => _structures;
 
+    public bool HasGlobal(string name) => Globals.ContainsKey(name) || GlobalsOfStructureTypes.ContainsKey(name);
+
     public void AddGlobals(Mli[] globals)
     {
         foreach (var info in globals)
@@ -28,7 +30,7 @@ public class VlModuleBuilder
         var index = _imageInfos.FindIndex(x => x.Name == "dataFunc");
         if (index != -1) _imageInfos.RemoveAt(index);
 
-        var dataFunc = AddFunction("dataFunc", [], []);
+        var dataFunc = AddFunction("dataFunc", [], [], 0);
         foreach (var global in Globals)
             dataFunc.CreateDataLabel(global.Key);
 
@@ -39,19 +41,19 @@ public class VlModuleBuilder
 
     private void CreateInitFunction()
     {
-        var init = AddFunction("init", [], []);
+        var init = AddFunction("init", [], [], 0);
         init.Init();
         init.CallFunc("main");
         init.End();
     }
 
-    public AsmFunctionBuilder AddFunction(string name, Mli[] args, Mli[] locals)
+    public AsmFunctionBuilder AddFunction(string name, Mli[] args, Mli[] locals, int returnsCount)
     {
         var localsStructures = new Dictionary<string, string>();
         var argsInfos = ToInfos(args, localsStructures);
         var localsInfos = ToInfos(locals, localsStructures);
 
-        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray());
+        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray(), returnsCount);
         func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
 
         foreach (var t in argsInfos)
@@ -71,17 +73,22 @@ public class VlModuleBuilder
         return locals;
     }
 
-    private List<LocalInfo> ToLocals(Mli t, Dictionary<string, string> localsStructures)
+    private List<LocalInfo> ToLocals(Mli t, Dictionary<string, string> localsStructures, string separator = ".")
     {
         if (!_structures.TryGetValue(t.Type, out var value))
             return [new LocalInfo(Enum.Parse<AsmType>(t.Type), t.Name, t.IsByRef)];
 
         localsStructures.Add(t.Name, t.Type);
-        return value.Select(x => new LocalInfo(x.Value, t.Name + "_" + x.Key, t.IsByRef)).ToList();
+        return value.Select(x => new LocalInfo(x.Value, $"{t.Name}{separator}{x.Key}", t.IsByRef)).ToList();
     }
 
-    public void AddStructure(string typeName, Dictionary<string, AsmType> structure)
+    public void AddStructure(string typeName, List<(string type, string name)> structure)
     {
-        _structures.Add(typeName, structure);
+        var lis = new List<LocalInfo>();
+
+        foreach (var pair in structure)
+            lis.AddRange(ToLocals(new Mli(pair.type, pair.name), new Dictionary<string, string>()));
+
+        _structures.Add(typeName.ToUpper(), lis.ToDictionary(x => x.Name, x => x.Type));
     }
 }

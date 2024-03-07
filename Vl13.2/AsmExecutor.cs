@@ -35,4 +35,18 @@ public static partial class AsmExecutor
 
         return (delegate*<T>)ptr;
     }
+
+    public static void PrintCode(VlModuleBuilder module)
+    {
+        foreach (var structure in module.Structures)
+            Console.WriteLine($"struct {structure.Key} [{string.Join(", ", structure.Value)}]");
+
+        foreach (var image in module.Compile())
+        {
+            Console.WriteLine($">>> >>> >>> image: {image.Name}");
+
+            foreach (var op in image.Image.Ops)
+                Console.WriteLine(op);
+        }
+    }
 }
