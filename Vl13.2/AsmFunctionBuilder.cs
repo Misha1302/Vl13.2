@@ -248,11 +248,14 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         var list = new List<AsmType>();
 
         foreach (var arg in args.Select(x => x.ToUpper()))
-            if (!Module.Structures.TryGetValue(arg, out var value))
-                list.Add(Enum.Parse<AsmType>(arg));
-            else list.AddRange(value.Select(x => x.Value));
+            if (!Module.Structures.TryGetValue(arg.Replace("&", ""), out var value))
+                list.Add(IsByRef(arg) ? AsmType.I64 : Enum.Parse<AsmType>(arg));
+            else
+                list.AddRange(value.Select(x => !IsByRef(arg) ? x.Value : AsmType.I64));
 
         return list.ToArray();
+
+        bool IsByRef(string type) => type.StartsWith('&');
     }
 
     public void DropCatch()

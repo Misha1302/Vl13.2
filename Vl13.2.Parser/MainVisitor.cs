@@ -41,18 +41,18 @@ public class MainVisitor : GrammarBaseVisitor<None>
                 x.type().ampersand() != null
             )
         ).ToArray();
+#warning
 
         var retType = context.type().GetText().ToUpper();
-        ModuleLocalInfo[]? returnValues = null;
+        var returnValues = Array.Empty<ModuleLocalInfo>();
         if (retType != _noneType)
         {
             var countArgs = !Module.Structures.ContainsKey(retType) ? 1 : Module.Structures[retType].Count;
             returnValues = Enumerable.Range(0, countArgs)
                 .Select(x => new ModuleLocalInfo("I64", ReturnAddress(x), true)).ToArray();
-            args = returnValues.Union(args).ToArray();
         }
 
-        _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), args, [], returnValues?.Length ?? 0);
+        _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), returnValues, args, []);
         Visit(context.block());
         _curFunc.Ret();
         _curFunc = null!;
@@ -193,7 +193,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         if (Module.HasGlobal(locName)) _curFunc.LoadDataFromLabel(locName);
         else if (_curFunc.HasLocal(locName)) _curFunc.GetLocal(locName);
-        else Thrower.Throw(new InvalidOperationException());
+        else Thrower.Throw(new InvalidOperationException($"Loc {locName} was not found"));
 
         return Nothing;
     }
@@ -217,7 +217,6 @@ public class MainVisitor : GrammarBaseVisitor<None>
         if (context.expression() != null)
         {
             _exprLevel++;
-#warning
             Visit(context.expression());
             for (var i = 0; i < _curFunc.ReturnsCount; i++)
                 _curFunc.SetLocal(ReturnAddress(i));
@@ -255,7 +254,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
         var fName = context.expression(0).GetText();
 
         _exprLevel++;
-        foreach (var e in context.expression().Skip(1).Reverse())
+        foreach (var e in context.expression().Skip(1))
             Visit(e);
         _exprLevel--;
 
@@ -316,12 +315,12 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitAddressCallExpr(GrammarParser.AddressCallExprContext context)
     {
-        var returnType = context.type()[^1].GetText();
+        var returnType = context.type()[^1].GetText().ToUpper();
         var isNotNone = returnType != _noneType;
         var returnValueLocalName = Guid.NewGuid().ToString();
 
         _exprLevel++;
-        foreach (var e in context.expression().Skip(1).Reverse())
+        foreach (var e in context.expression().Skip(1))
             Visit(e);
         _exprLevel--;
 
@@ -340,7 +339,9 @@ public class MainVisitor : GrammarBaseVisitor<None>
         ).ToArray();
 
         Visit(context.expression(0));
-        _curFunc.CallAddress(types);
+        _curFunc.CallAddress(types[^1].Equals(_noneType, StringComparison.CurrentCultureIgnoreCase)
+            ? types[..^1]
+            : types);
 
         if (_exprLevel != 0 && isNotNone)
             _curFunc.GetLocal(returnValueLocalName);

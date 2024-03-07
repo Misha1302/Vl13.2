@@ -30,7 +30,7 @@ public class VlModuleBuilder
         var index = _imageInfos.FindIndex(x => x.Name == "dataFunc");
         if (index != -1) _imageInfos.RemoveAt(index);
 
-        var dataFunc = AddFunction("dataFunc", [], [], 0);
+        var dataFunc = AddFunction("dataFunc", [], [], []);
         foreach (var global in Globals)
             dataFunc.CreateDataLabel(global.Key);
 
@@ -41,23 +41,26 @@ public class VlModuleBuilder
 
     private void CreateInitFunction()
     {
-        var init = AddFunction("init", [], [], 0);
+        var init = AddFunction("init", [], [], []);
         init.Init();
         init.CallFunc("main");
         init.End();
     }
 
-    public AsmFunctionBuilder AddFunction(string name, Mli[] args, Mli[] locals, int returnsCount)
+    public AsmFunctionBuilder AddFunction(string name, Mli[] returnValues, Mli[] args, Mli[] locals)
     {
         var localsStructures = new Dictionary<string, string>();
         var argsInfos = ToInfos(args, localsStructures);
+        var returnsInfos = ToInfos(returnValues, localsStructures);
         var localsInfos = ToInfos(locals, localsStructures);
 
-        var func = new AsmFunctionBuilder(name, this, argsInfos.Select(x => x.Type).ToArray(), returnsCount);
-        func.DeclareLocals(localsInfos.Union(argsInfos).ToArray(), localsStructures);
+        var func = new AsmFunctionBuilder(name, this, returnsInfos.Union(argsInfos).Select(x => x.Type).ToArray(), returnsInfos.Count);
+        func.DeclareLocals(localsInfos.Union(argsInfos).Union(returnsInfos).ToArray(), localsStructures);
 
-        foreach (var t in argsInfos)
+        foreach (var t in returnsInfos) 
             func.SetLocal(t.Name, null, false);
+        for (var index = argsInfos.Count - 1; index >= 0; index--) 
+            func.SetLocal(argsInfos[index].Name, null, false);
 
         _imageInfos.Add(func);
         return func;

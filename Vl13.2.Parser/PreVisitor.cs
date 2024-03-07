@@ -10,7 +10,7 @@ public class PreVisitor : GrammarBaseVisitor<None>
     {
         var args = context.varDecl().Select(x => x.type().GetText());
 
-        Functions.Add(context.IDENTIFIER().GetText(), (context.type().GetText(), args.ToArray()));
+        Functions.Add(context.IDENTIFIER().GetText(), (context.type().GetText().ToUpper(), args.ToArray()));
         return base.VisitFunctionDecl(context);
     }
 }

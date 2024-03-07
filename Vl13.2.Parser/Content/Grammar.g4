@@ -38,7 +38,7 @@ expression:
     | expression (PLUS | MINUS) expression                                                              #sumSubExpr
     | ampersand IDENTIFIER                                                                              #getAddressExpr
     | expression '(' (expression (',' expression)*)? ')'                                                #callExpr
-    | expression '<' type (',' type)* '>' '(' (expression (',' expression)*)? ')'                       #addressCallExpr
+    | expression '[' type? (',' type)* ']' '(' (expression (',' expression)*)? ')'                      #addressCallExpr
     | '(' expression ')'                                                                                #parentsExpr
     | expression (LT | LE | GT | GE) expression                                                         #cmpExpr
     | expression (EQ | NEQ) expression                                                                  #eqExpr
