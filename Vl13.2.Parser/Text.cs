@@ -72,12 +72,12 @@ public static class Text
         func main -> none {
             vec : Vector3; vec2 : Vector3; vec3 : Vector3
         
-            vec.x = 5; vec.y = 12; vec.z = -32; vec.print = &printVec; vec.add = &addVecs
-            vec2.x = 5; vec2.y = 12; vec2.z = -32; vec2.print = &printVec; vec2.add = &addVecs
+            vec.x = 5; vec.y = 12; vec.z = -32; vec.print = &printSquaredVec; vec.add = &addVecs
+            vec2.x = 5; vec2.y = 12; vec2.z = -32; vec2.print = &printSquaredVec; vec2.add = &addVecs
         
             // no need to copy
-            vec3 = (vec.add)(&vec, &vec2)
-            (vec3.print)(&vec3)
+            vec3 = vec.add[&Vector3,&Vector3,Vector3](&vec, &vec2)
+            vec3.print[&Vector3, none](&vec3)
         }
 
         func printSquaredVec vec : &Vector3 -> none {
