@@ -136,9 +136,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
             locName = context.IDENTIFIER().GetText();
         }
 
-        _exprLevel++;
-        Visit(context.expression());
-        _exprLevel--;
+        VisitExpr(context.expression());
 
         if (Module.HasGlobal(locName)) _curFunc.StoreDataToLabel(locName);
         else if (_curFunc.HasLocal(locName)) _curFunc.SetLocal(locName);
@@ -149,10 +147,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitSumSubExpr(GrammarParser.SumSubExprContext context)
     {
-        _exprLevel++;
-        foreach (var expr in context.expression())
-            Visit(expr);
-        _exprLevel--;
+        VisitExprs(context.expression());
 
         if (context.PLUS() != null) _curFunc.Add();
         else if (context.MINUS() != null) _curFunc.Sub();
@@ -162,10 +157,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitMulDivModExpr(GrammarParser.MulDivModExprContext context)
     {
-        _exprLevel++;
-        foreach (var expr in context.expression())
-            Visit(expr);
-        _exprLevel--;
+        VisitExprs(context.expression());
 
         if (context.STAR() != null) _curFunc.Mul();
         else if (context.DIV() != null) _curFunc.Div();
@@ -221,11 +213,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         if (context.expression() != null)
         {
-            _exprLevel++;
-            Visit(context.expression());
+            VisitExpr(context.expression());
+
             for (var i = 0; i < _curFunc.ReturnsCount; i++)
                 _curFunc.SetLocal(ReturnAddress(i));
-            _exprLevel--;
         }
 
         _curFunc.Ret();
@@ -258,10 +249,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var fName = context.expression(0).GetText();
 
-        _exprLevel++;
-        foreach (var e in context.expression().Skip(1))
-            Visit(e);
-        _exprLevel--;
+        VisitExprs(context.expression(), 0);
 
         Action a =
             ReflectionManager.Methods.TryGetValue(fName, out var tuple)
@@ -311,7 +299,8 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitStruct(GrammarParser.StructContext context)
     {
-        Module.AddStructure(context.IDENTIFIER().GetText(),
+        Module.AddStructure(
+            context.IDENTIFIER().GetText(),
             context.varDecl().Select(x => (x.type().GetText(), x.IDENTIFIER().GetText())).ToList()
         );
 
@@ -324,10 +313,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
         var isNotNone = returnType != _noneType;
         var returnValueLocalName = Guid.NewGuid().ToString();
 
-        _exprLevel++;
-        foreach (var e in context.expression().Skip(1))
-            Visit(e);
-        _exprLevel--;
+        VisitExprs(context.expression(), 0);
 
         if (isNotNone)
         {
@@ -335,23 +321,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
             _curFunc.LocAddress(returnValueLocalName);
         }
 
-        var typeContexts = context.type();
-
-        var types = typeContexts.Select(
-            (t, index) =>
-                new VlType(
-                    isNotNone && index == 0
-                        ? "I64"
-                        : t.GetText()
-                )
-        ).ToList();
+        var types = context.type().Select(t => new VlType(t.GetText())).ToList();
 
         Visit(context.expression(0));
-        _curFunc.CallAddress(
-            types[^1] == _noneType
-                ? types[..^1]
-                : types
-        );
+        _curFunc.CallAddress(types[^1] == _noneType ? types[..^1] : types);
 
         if (_exprLevel != 0 && isNotNone)
             _curFunc.GetLocal(returnValueLocalName);
@@ -361,12 +334,8 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitIf(GrammarParser.IfContext context)
     {
-        _curFunc.Condition(() =>
-            {
-                _exprLevel++;
-                Visit(context.expression());
-                _exprLevel--;
-            },
+        _curFunc.Condition(
+            () => VisitExpr(context.expression()),
             () => Visit(context.block()),
             () =>
             {
@@ -389,29 +358,37 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitCmpExpr(GrammarParser.CmpExprContext context)
     {
-        _exprLevel++;
-        foreach (var e in context.expression())
-            Visit(e);
-        _exprLevel--;
+        VisitExprs(context.expression());
 
         if (context.LT() != null) _curFunc.Lt();
         else if (context.LE() != null) _curFunc.Le();
         else if (context.GT() != null) _curFunc.Gt();
         else if (context.GE() != null) _curFunc.Ge();
+        else Thrower.Throw(new InvalidOperationException($"Unknown sign {context.GetText()}"));
 
         return Nothing;
     }
 
     public override None VisitEqExpr(GrammarParser.EqExprContext context)
     {
-        _exprLevel++;
-        foreach (var e in context.expression())
-            Visit(e);
-        _exprLevel--;
+        VisitExprs(context.expression());
 
         if (context.EQ() != null) _curFunc.Eq();
         else if (context.NEQ() != null) _curFunc.Neq();
 
         return Nothing;
+    }
+
+    private void VisitExprs<T>(IEnumerable<T> blocks, params Index[] elementsToIgnore) where T : IParseTree
+    {
+        foreach (var b in blocks.Where((_, i) => !elementsToIgnore.Contains(i)))
+            VisitExpr(b);
+    }
+
+    private void VisitExpr<T>(T block) where T : IParseTree
+    {
+        _exprLevel++;
+        Visit(block);
+        _exprLevel--;
     }
 }
