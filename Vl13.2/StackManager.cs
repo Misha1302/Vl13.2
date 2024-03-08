@@ -6,7 +6,7 @@ public class StackManager(VlModule module, StackPositioner sp)
 {
     private readonly Stack<AsmType> _types = new();
 
-    public void AddTypes(AsmType[] asmTypes)
+    public void AddTypes(List<AsmType> asmTypes)
     {
         foreach (var type in asmTypes)
             Push(null, type);

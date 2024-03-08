@@ -8,9 +8,8 @@ public class VlModuleBuilder
     public readonly Dictionary<string, LocalInfo> Globals = new();
     public readonly Dictionary<string, VlType> GlobalsOfStructureTypes = new();
 
-    public VlModuleBuilder(params Mli[] globals)
+    public VlModuleBuilder()
     {
-        AddGlobals(globals);
         CreateBuildinFunctions();
     }
 
@@ -18,11 +17,10 @@ public class VlModuleBuilder
 
     public bool HasGlobal(string name) => Globals.ContainsKey(name) || GlobalsOfStructureTypes.ContainsKey(name);
 
-    public void AddGlobals(Mli[] globals)
+    public void AddGlobals(Mli global)
     {
-        foreach (var info in globals)
-            foreach (var loc in ToLocals(info, GlobalsOfStructureTypes))
-                Globals.Add(info.Name, loc);
+        foreach (var loc in ToLocals(global, GlobalsOfStructureTypes))
+            Globals.Add(global.Name, loc);
     }
 
     public List<VlImageInfo> Compile()
@@ -47,15 +45,19 @@ public class VlModuleBuilder
         init.End();
     }
 
-    public AsmFunctionBuilder AddFunction(string name, Mli[] returnValues, Mli[] args, Mli[] locals)
+    public AsmFunctionBuilder AddFunction(string name, List<Mli> returnValues, List<Mli> args, List<Mli> locals)
     {
         var localsStructures = new Dictionary<string, VlType>();
         var argsInfos = ToInfos(args, localsStructures);
         var returnsInfos = ToInfos(returnValues, localsStructures);
         var localsInfos = ToInfos(locals, localsStructures);
 
-        var func = new AsmFunctionBuilder(name, this, returnsInfos.Union(argsInfos).Select(x => x.Type).ToArray(),
-            returnsInfos.Count);
+        var func = new AsmFunctionBuilder(
+            name,
+            this,
+            returnsInfos.Union(argsInfos).Select(x => x.Type).ToList(),
+            returnsInfos.Count
+        );
         func.DeclareLocals(localsInfos.Union(argsInfos).Union(returnsInfos).ToArray(), localsStructures);
 
         foreach (var t in returnsInfos)
@@ -67,7 +69,7 @@ public class VlModuleBuilder
         return func;
     }
 
-    public List<LocalInfo> ToInfos(Mli[] arr, Dictionary<string, VlType> localsStructures)
+    public List<LocalInfo> ToInfos(List<Mli> arr, Dictionary<string, VlType> localsStructures)
     {
         var locals = new List<LocalInfo>();
 

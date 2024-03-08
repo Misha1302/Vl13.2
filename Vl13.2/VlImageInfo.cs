@@ -2,7 +2,7 @@
 
 using System.Reflection;
 
-public partial record VlImageInfo(string Name, AsmType[] ArgTypes)
+public partial record VlImageInfo(string Name, List<AsmType> ArgTypes)
 {
     public readonly VlImage Image = new();
 
@@ -77,7 +77,7 @@ public partial record VlImageInfo
     public void Div() => Image.Emit(new Op(OpType.Div, null));
     public void Mod() => Image.Emit(new Op(OpType.Mod, null));
     public void CallFunc(string name) => Image.Emit(new Op(OpType.CallFunc, name));
-    public void CallAddress(AsmType[] args) => Image.Emit(new Op(OpType.CallAddress, args));
+    public void CallAddress(List<AsmType> args) => Image.Emit(new Op(OpType.CallAddress, args));
     public void Ret() => Image.Emit(new Op(OpType.Ret, null));
     public void LocAddress(string locName, AsmType type) => Image.Emit(new Op(OpType.LocAddress, locName, type));
     public void Dup() => Image.Emit(new Op(OpType.Dup, null));

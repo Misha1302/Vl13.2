@@ -62,7 +62,8 @@ public static class Program
 
         var main = module.AddFunction("main", [], [], [new Mli(new VlType("I64"), "returnValue")]);
 
-        main.CallFunc("hello", () => main.LocAddress("returnValue"));
+        main.LocAddress("returnValue");
+        main.CallFunc("hello");
 
         main.GetLocal("returnValue");
         main.WriteLine(typeof(long));

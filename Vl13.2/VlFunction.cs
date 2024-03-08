@@ -255,7 +255,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 _callManager.Call(tuple);
                 break;
             case OpType.CallAddress:
-                module.StackManager.SubTypes(op.Arg<AsmType[]>(0).Length);
+                module.StackManager.SubTypes(op.Arg<List<AsmType>>(0).Count);
                 module.StackManager.Pop(rax);
                 module.Assembler.call(rax);
                 break;
@@ -263,7 +263,7 @@ public class VlFunction(VlImageInfo imageInfo, VlModule module)
                 var fName = op.Arg<string>(0);
                 var f = module.Images.First(x => x.Name == fName);
 
-                module.StackManager.SubTypes(f.ArgTypes.Length);
+                module.StackManager.SubTypes(f.ArgTypes.Count);
                 module.Assembler.call(module.LabelsManager.GetOrAddLabel(fName).Label);
                 break;
             case OpType.LocAddress:

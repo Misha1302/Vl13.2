@@ -40,15 +40,15 @@ public class MainVisitor : GrammarBaseVisitor<None>
                 x.IDENTIFIER().GetText(),
                 x.type().ampersand() != null
             )
-        ).ToArray();
+        ).ToList();
 
         var retType = new VlType(context.type().GetText());
-        var returnValues = Array.Empty<ModuleLocalInfo>();
+        var returnValues = new List<ModuleLocalInfo>();
         if (retType != _noneType)
         {
             var countArgs = !Module.Structures.ContainsKey(retType) ? 1 : Module.Structures[retType].Count;
             returnValues = Enumerable.Range(0, countArgs)
-                .Select(x => new ModuleLocalInfo(new VlType("I64"), ReturnAddress(x), true)).ToArray();
+                .Select(x => new ModuleLocalInfo(new VlType("I64"), ReturnAddress(x), true)).ToList();
         }
 
         _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), returnValues, args, []);
@@ -204,10 +204,10 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitGlobalDecl(GrammarParser.GlobalDeclContext context)
     {
-        Module.AddGlobals([
+        Module.AddGlobals(
             new ModuleLocalInfo(new VlType(context.varDecl().type().GetText()),
                 context.varDecl().IDENTIFIER().GetText())
-        ]);
+        );
         return Nothing;
     }
 
@@ -344,12 +344,13 @@ public class MainVisitor : GrammarBaseVisitor<None>
                         ? "I64"
                         : t.GetText()
                 )
-        ).ToArray();
+        ).ToList();
 
         Visit(context.expression(0));
-        _curFunc.CallAddress(types[^1] == _noneType
-            ? types[..^1]
-            : types
+        _curFunc.CallAddress(
+            types[^1] == _noneType
+                ? types[..^1]
+                : types
         );
 
         if (_exprLevel != 0 && isNotNone)

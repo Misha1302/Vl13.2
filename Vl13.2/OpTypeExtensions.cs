@@ -10,9 +10,9 @@ public static class OpTypeExtensions
 
         if (type.IsPush()) return 1;
         if (type.IsDup()) return 1;
-        if (type == OpType.CallFunc) return 1 - module.Images.First(x => x.Name == op.Arg<string>(0)).ArgTypes.Length;
+        if (type == OpType.CallFunc) return 1 - module.Images.First(x => x.Name == op.Arg<string>(0)).ArgTypes.Count;
         if (type == OpType.CallSharp) return 1 - CalcParamsLen(op);
-        if (type == OpType.CallAddress) return 1 - op.Arg<AsmType[]>(0).Length;
+        if (type == OpType.CallAddress) return 1 - op.Arg<List<AsmType>>(0).Count;
         if (type.IsLoad()) return 1;
 
         if (type.IsConv()) return 0;

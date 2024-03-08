@@ -1,6 +1,6 @@
 ﻿namespace Vl13._2;
 
-public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] ArgTypes, int ReturnsCount)
+public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, List<AsmType> ArgTypes, int ReturnsCount)
     : VlImageInfo(Name, ArgTypes)
 {
     private Dictionary<string, LocalInfo> _localsList = new();
@@ -132,14 +132,6 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
 
     public void Mul(Action a, Action b) => BinaryOp(a, b, Mul);
 
-    public void CallFunc(string name, params Action[] args)
-    {
-        for (var index = args.Length - 1; index >= 0; index--)
-            args[index]();
-
-        base.CallFunc(name);
-    }
-
     public void SetField(string structName, string fieldName, Action action)
     {
         SetLocal($"{structName}.{fieldName}", action);
@@ -240,12 +232,12 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
         );
     }
 
-    public void CallAddress(VlType[] args)
+    public void CallAddress(List<VlType> args)
     {
         base.CallAddress(ToTypes(args));
     }
 
-    private AsmType[] ToTypes(VlType[] args)
+    private List<AsmType> ToTypes(List<VlType> args)
     {
         var list = new List<AsmType>();
 
@@ -255,7 +247,7 @@ public record AsmFunctionBuilder(string Name, VlModuleBuilder Module, AsmType[] 
             else
                 list.AddRange(value.Select(x => !arg.MainType.IsByRef ? x.Value : AsmType.I64));
 
-        return list.ToArray();
+        return list.ToList();
     }
 
     public void DropCatch()
