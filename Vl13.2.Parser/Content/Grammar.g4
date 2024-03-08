@@ -10,7 +10,7 @@ functionDecl: 'func' IDENTIFIER (varDecl (',' varDecl)*)? '->' type block;
 globalDecl: 'global' varDecl;
 
 block: ('=>' line) | ('{' line* '}');
-type: ampersand? IDENTIFIER;
+type: ampersand? IDENTIFIER ('[' type? (',' type)* ']')?;
 ret: 'ret' expression?;
 
 struct: 'struct' IDENTIFIER (varDecl (',' varDecl)*)?;

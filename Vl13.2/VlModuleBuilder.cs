@@ -3,10 +3,10 @@
 public class VlModuleBuilder
 {
     private readonly List<VlImageInfo> _imageInfos = [];
-    private readonly Dictionary<StringType, Dictionary<string, AsmType>> _structures = new();
+    private readonly Dictionary<VlType, Dictionary<string, AsmType>> _structures = new();
 
     public readonly Dictionary<string, LocalInfo> Globals = new();
-    public readonly Dictionary<string, StringType> GlobalsOfStructureTypes = new();
+    public readonly Dictionary<string, VlType> GlobalsOfStructureTypes = new();
 
     public VlModuleBuilder(params Mli[] globals)
     {
@@ -14,7 +14,7 @@ public class VlModuleBuilder
         CreateBuildinFunctions();
     }
 
-    public IReadOnlyDictionary<StringType, Dictionary<string, AsmType>> Structures => _structures;
+    public IReadOnlyDictionary<VlType, Dictionary<string, AsmType>> Structures => _structures;
 
     public bool HasGlobal(string name) => Globals.ContainsKey(name) || GlobalsOfStructureTypes.ContainsKey(name);
 
@@ -49,7 +49,7 @@ public class VlModuleBuilder
 
     public AsmFunctionBuilder AddFunction(string name, Mli[] returnValues, Mli[] args, Mli[] locals)
     {
-        var localsStructures = new Dictionary<string, StringType>();
+        var localsStructures = new Dictionary<string, VlType>();
         var argsInfos = ToInfos(args, localsStructures);
         var returnsInfos = ToInfos(returnValues, localsStructures);
         var localsInfos = ToInfos(locals, localsStructures);
@@ -67,7 +67,7 @@ public class VlModuleBuilder
         return func;
     }
 
-    public List<LocalInfo> ToInfos(Mli[] arr, Dictionary<string, StringType> localsStructures)
+    public List<LocalInfo> ToInfos(Mli[] arr, Dictionary<string, VlType> localsStructures)
     {
         var locals = new List<LocalInfo>();
 
@@ -77,10 +77,10 @@ public class VlModuleBuilder
         return locals;
     }
 
-    private List<LocalInfo> ToLocals(Mli t, Dictionary<string, StringType> localsStructures, string separator = ".")
+    private List<LocalInfo> ToLocals(Mli t, Dictionary<string, VlType> localsStructures, string separator = ".")
     {
         if (!_structures.TryGetValue(t.Type, out var value))
-            return [new LocalInfo(Enum.Parse<AsmType>(t.Type.Type), t.Name, t.IsByRef)];
+            return [new LocalInfo(Enum.Parse<AsmType>(t.Type.MainType.Type), t.Name, t.IsByRef)];
 
         localsStructures.Add(t.Name, t.Type);
         return value.Select(x => new LocalInfo(x.Value, $"{t.Name}{separator}{x.Key}", t.IsByRef)).ToList();
@@ -91,8 +91,8 @@ public class VlModuleBuilder
         var lis = new List<LocalInfo>();
 
         foreach (var pair in structure)
-            lis.AddRange(ToLocals(new Mli(new StringType(pair.type), pair.name), new Dictionary<string, StringType>()));
+            lis.AddRange(ToLocals(new Mli(new VlType(pair.type), pair.name), new Dictionary<string, VlType>()));
 
-        _structures.Add(new StringType(typeName), lis.ToDictionary(x => x.Name, x => x.Type));
+        _structures.Add(new VlType(typeName), lis.ToDictionary(x => x.Name, x => x.Type));
     }
 }

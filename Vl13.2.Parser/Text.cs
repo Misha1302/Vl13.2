@@ -67,7 +67,7 @@ public static class Text
         """
         include 'main'
 
-        struct Vector3 x : i64, y : i64, z : i64, print : i64, add : i64
+        struct Vector3 x : i64, y : i64, z : i64, print : i64[&Vector3, none], add : i64[&Vector3, &Vector3, Vector3]
 
         func main -> none {
             vec : Vector3; vec2 : Vector3; vec3 : Vector3
@@ -76,7 +76,7 @@ public static class Text
             vec2.x = 5; vec2.y = 12; vec2.z = -32; vec2.print = &printSquaredVec; vec2.add = &addVecs
         
             // no need to copy
-            vec3 = vec.add[&Vector3,&Vector3,Vector3](&vec, &vec2)
+            vec3 = vec.add[&Vector3, &Vector3, Vector3](&vec, &vec2)
             vec3.print[&Vector3, none](&vec3)
         }
 

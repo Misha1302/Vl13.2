@@ -10,7 +10,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 {
     private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
-    private readonly StringType _noneType = new("NONE");
+    private readonly VlType _noneType = new("NONE");
 
     private AsmFunctionBuilder _curFunc = null!;
     private PreVisitor _preVisitor = null!;
@@ -36,19 +36,19 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         var args = context.varDecl().Select(x =>
             new ModuleLocalInfo(
-                new StringType(x.type().IDENTIFIER().GetText()),
+                new VlType(x.type().IDENTIFIER().GetText()),
                 x.IDENTIFIER().GetText(),
                 x.type().ampersand() != null
             )
         ).ToArray();
 
-        var retType = new StringType(context.type().GetText());
+        var retType = new VlType(context.type().GetText());
         var returnValues = Array.Empty<ModuleLocalInfo>();
         if (retType != _noneType)
         {
             var countArgs = !Module.Structures.ContainsKey(retType) ? 1 : Module.Structures[retType].Count;
             returnValues = Enumerable.Range(0, countArgs)
-                .Select(x => new ModuleLocalInfo(new StringType("I64"), ReturnAddress(x), true)).ToArray();
+                .Select(x => new ModuleLocalInfo(new VlType("I64"), ReturnAddress(x), true)).ToArray();
         }
 
         _curFunc = Module.AddFunction(context.IDENTIFIER().GetText(), returnValues, args, []);
@@ -101,7 +101,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     {
         _curFunc.AddLocal(
             new ModuleLocalInfo(
-                new StringType(context.type().IDENTIFIER().GetText()),
+                new VlType(context.type().IDENTIFIER().GetText()),
                 context.IDENTIFIER().GetText(),
                 context.type().ampersand() != null
             )
@@ -205,7 +205,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
     public override None VisitGlobalDecl(GrammarParser.GlobalDeclContext context)
     {
         Module.AddGlobals([
-            new ModuleLocalInfo(new StringType(context.varDecl().type().GetText()),
+            new ModuleLocalInfo(new VlType(context.varDecl().type().GetText()),
                 context.varDecl().IDENTIFIER().GetText())
         ]);
         return Nothing;
@@ -320,7 +320,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
     public override None VisitAddressCallExpr(GrammarParser.AddressCallExprContext context)
     {
-        var returnType = new StringType(context.type()[^1].GetText());
+        var returnType = new VlType(context.type()[^1].GetText());
         var isNotNone = returnType != _noneType;
         var returnValueLocalName = Guid.NewGuid().ToString();
 
@@ -339,7 +339,7 @@ public class MainVisitor : GrammarBaseVisitor<None>
 
         var types = typeContexts.Select(
             (t, index) =>
-                new StringType(
+                new VlType(
                     isNotNone && index == 0
                         ? "I64"
                         : t.GetText()
