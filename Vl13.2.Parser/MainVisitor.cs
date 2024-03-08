@@ -8,7 +8,6 @@ using static None;
 // ReSharper disable ConvertToConstant.Local
 public class MainVisitor : GrammarBaseVisitor<None>
 {
-    private static readonly HashSet<Type> _allowedTypes = [typeof(long), typeof(int), typeof(double), typeof(bool)];
     public readonly VlModuleBuilder Module = new();
     private readonly VlType _noneType = new("NONE");
 
@@ -67,12 +66,12 @@ public class MainVisitor : GrammarBaseVisitor<None>
             mi.IsStatic && !mi.IsAbstract && !mi.ContainsGenericParameters &&
             !mi.DeclaringType!.ContainsGenericParameters &&
             !mi.IsConstructedGenericMethod &&
-            mi.GetParameters().All(x => _allowedTypes.Contains(x.ParameterType)) &&
-            (mi.ReturnType == typeof(void) || _allowedTypes.Contains(mi.ReturnType));
+            mi.GetParameters().All(x => TextToType.AllowedTypes.Contains(x.ParameterType)) &&
+            (mi.ReturnType == typeof(void) || TextToType.AllowedTypes.Contains(mi.ReturnType));
 
         Func<Type, MethodInfo, string> makeAlias = (type, info) =>
         {
-            var types = TextToType.TypeToShortString(info.GetParameters());
+            var types = string.Concat(info.GetParameters().Select(x => TextToType.TypeAsStrings[x.ParameterType]));
 
             var s = "";
             if (!string.IsNullOrEmpty(type.Namespace)) s += type.Namespace + ".";
@@ -91,8 +90,29 @@ public class MainVisitor : GrammarBaseVisitor<None>
         }
         else
         {
-            ReflectionManager.AddAllMethods(Assembly.Load(path), makeAlias, canIncludeMethod);
+            ReflectionManager.AddAllMethods(
+                File.Exists(path) ? Assembly.LoadFile(Path.GetFullPath(path)) : Assembly.Load(path),
+                makeAlias,
+                canIncludeMethod
+            );
         }
+
+        return Nothing;
+    }
+
+    public override None VisitMemSetExpr(GrammarParser.MemSetExprContext context)
+    {
+        VisitExpr(context.expression(1));
+        VisitExpr(context.expression(0));
+        _curFunc.Store64();
+
+        return Nothing;
+    }
+
+    public override None VisitMemReadExpr(GrammarParser.MemReadExprContext context)
+    {
+        VisitExpr(context.expression());
+        _curFunc.Load64();
 
         return Nothing;
     }

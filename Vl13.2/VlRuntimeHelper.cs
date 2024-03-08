@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 public static class VlRuntimeHelper
 {
-    private static readonly Stack<(long address, long rsp, long rbp)> _stack = new();
+    private static readonly Stack<(long address, long rsp, long rbp)> _catchsStack = new();
 
     public static double RemF64(double a, double b) =>
         (Math.Abs(a) - Math.Abs(b) * Math.Floor(Math.Abs(a) / Math.Abs(b))) * Math.Sign(a);
@@ -43,18 +43,9 @@ public static class VlRuntimeHelper
     public static void Free(long ptr) =>
         Marshal.FreeCoTaskMem((nint)ptr);
 
-    public static int WriteNumbers(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10,
-        int a11)
-    {
-        Console.WriteLine($"{a1}, {a2}, {a3}, {a4}, {a5}, {a6}, {a7}, {a8}, {a9}, {a10}, {a11}");
-        return 1;
-    }
-
     public static void StackOverflow(long value) =>
         Thrower.Throw(new StackOverflowException($"Index was {value}"));
 
-    public static long RndInt(long a, long b) =>
-        Random.Shared.NextInt64(a, b);
 
     public static long I8ToI64(sbyte value) => value;
     public static long I16ToI64(short value) => value;
@@ -65,12 +56,10 @@ public static class VlRuntimeHelper
     public static double I64ToF64(long value) => value;
     public static long F64ToI64(double value) => (long)(value + 0.0001);
 
-    public static void PushAddress(long address, long rsp, long rbp) => _stack.Push((address, rsp, rbp));
+    public static void PushAddress(long address, long rsp, long rbp) => _catchsStack.Push((address, rsp, rbp));
 
     public static unsafe void PopAddress(long addressPtr, long rspPtr, long rbpPtr) =>
-        (*(long*)(void*)addressPtr, *(long*)(void*)rspPtr, *(long*)(void*)rbpPtr) = _stack.Pop();
+        (*(long*)(void*)addressPtr, *(long*)(void*)rspPtr, *(long*)(void*)rbpPtr) = _catchsStack.Pop();
 
-    public static void DropAddress() => _stack.Pop();
-
-    public static long Time() => DateTimeOffset.Now.ToUnixTimeMilliseconds();
+    public static void DropAddress() => _catchsStack.Pop();
 }

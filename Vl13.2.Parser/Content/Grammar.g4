@@ -43,6 +43,8 @@ expression:
     | expression (LT | LE | GT | GE) expression                                                         #cmpExpr
     | expression (EQ | NEQ) expression                                                                  #eqExpr
     | if                                                                                                #ifExpr
+    | expression '<-' expression                                                                        #memSetExpr
+    | '*' expression                                                                                    #memReadExpr
     ;
 
 LT: '<'; LE: '<='; GT: '>'; GE: '>=';

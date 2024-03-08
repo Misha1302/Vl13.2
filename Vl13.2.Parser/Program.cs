@@ -5,7 +5,7 @@ using Vl13._2.Parser.Content;
 
 unsafe
 {
-    var inputStream = new AntlrInputStream(Text.FullProgram);
+    var inputStream = new AntlrInputStream(Text.SimpleProgram);
     var speakLexer = new GrammarLexer(inputStream);
     var commonTokenStream = new CommonTokenStream(speakLexer);
     var speakParser = new GrammarParser(commonTokenStream);
